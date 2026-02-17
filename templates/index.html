@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ru" class="theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сравнение: с конфигом и без</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #1a1a1d;
+      --bg-elevated: #252529;
+      --bg-input: #2d2d32;
+      --text: #e4e4e7;
+      --text-muted: #71717a;
+      --border: #3f3f46;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --baseline: #71717a;
+      --success: #22c55e;
+      --error: #ef4444;
+      --diff-add: rgba(34, 197, 94, 0.25);
+      --diff-remove: rgba(239, 68, 68, 0.25);
+    }
+    .theme-light {
+      --bg: #fafafa;
+      --bg-elevated: #fff;
+      --bg-input: #fff;
+      --text: #18181b;
+      --text-muted: #71717a;
+      --border: #e4e4e7;
+      --accent: #4f46e5;
+      --accent-hover: #6366f1;
+      --baseline: #52525b;
+      --diff-add: rgba(34, 197, 94, 0.2);
+      --diff-remove: rgba(239, 68, 68, 0.2);
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .app { max-width: 1400px; margin: 0 auto; padding: 0 1rem 2rem; }
+
+    /* Sticky header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 0;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .header h1 { font-size: 1.125rem; font-weight: 600; margin: 0; }
+    .header-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+    .status { font-size: 0.875rem; color: var(--text-muted); }
+    .status.loading { color: var(--accent); }
+    .status.error { color: var(--error); }
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-secondary { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: var(--bg-input); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-icon { padding: 0.5rem; }
+
+    /* Main layout */
+    .main-content { padding-top: 1rem; }
+    .input-section { margin-bottom: 1rem; }
+    .input-section label { display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 0.25rem; }
+    .textarea-wrap { position: relative; }
+    textarea, input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-input);
+      color: var(--text);
+      font: inherit;
+      transition: box-shadow 0.15s ease, outline 0.15s ease;
+    }
+    textarea:focus-visible, input:focus-visible, select:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .token-count { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .clear-btn { position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+
+    /* Config panel */
+    .config-panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-elevated);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .config-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 500;
+    }
+    .config-panel-header:hover { background: var(--bg-input); }
+    .config-panel-header:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .config-panel-body { padding: 0.75rem 1rem; border-top: 1px solid var(--border); }
+    .config-panel.collapsed .config-panel-body { display: none; }
+    .config-grid { display: grid; gap: 0.75rem; }
+    .config-item label { display: block; font-size: 0.8125rem; font-weight: 500; margin-bottom: 0.25rem; }
+
+    /* Stop sequences tags */
+    .stop-tags-wrap {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-input);
+      padding: 0.25rem 0.5rem;
+      min-height: 2.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .stop-tags-wrap:focus-within { box-shadow: 0 0 0 2px var(--accent); }
+    .stop-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.4rem;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+    }
+    .stop-tag button {
+      background: none; border: none; color: inherit; cursor: pointer;
+      padding: 0; line-height: 1; font-size: 1rem; opacity: 0.8;
+    }
+    .stop-tag button:hover { opacity: 1; }
+    .stop-tag button:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+    .stop-tags-input {
+      flex: 1; min-width: 80px; border: none; background: transparent;
+      padding: 0.25rem; font: inherit; color: var(--text);
+    }
+    .stop-tags-input:focus { outline: none; }
+    .stop-tags-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+    /* Max tokens slider */
+    /* Results: split view */
+    .results-wrap { margin-top: 1.5rem; }
+    .results-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .tabs-mobile { display: none; }
+    @media (max-width: 767px) {
+      .tabs-mobile { display: flex; gap: 0.25rem; }
+      .tabs-mobile .btn { flex: 1; }
+      .results-columns .column { display: none; }
+      .results-columns .column.active { display: block; }
+    }
+    @media (min-width: 768px) {
+      .tabs-mobile { display: none !important; }
+      .results-columns .column { display: block !important; }
+    }
+    .results-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 767px) {
+      .results-columns { grid-template-columns: 1fr; }
+    }
+    .column {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-elevated);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .column-header {
+      padding: 0.5rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .column-baseline .column-header { color: var(--baseline); }
+    .column-with-config .column-header { color: var(--accent); }
+    .column-body {
+      padding: 0.75rem 1rem;
+      flex: 1;
+      min-height: 160px;
+    }
+    .column-body pre, .column-body .response-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    .dialog-messages { display: flex; flex-direction: column; gap: 0.75rem; }
+    .message { break-inside: avoid; }
+    .message-label { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .message-user .message-label { color: var(--accent); }
+    .message-assistant .message-label { color: var(--baseline); }
+    .message-content { white-space: pre-wrap; word-break: break-word; font-size: 0.875rem; line-height: 1.5; }
+    .column-body .response-text mark.stop-highlight { background: var(--accent); color: #fff; padding: 0 2px; border-radius: 2px; }
+    .column-metrics {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .column-metrics dl { margin: 0; display: flex; flex-wrap: wrap; gap: 0 1rem; }
+    .column-metrics dt { font-weight: 500; }
+    .column-metrics dd { margin: 0; }
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    .empty-state svg { width: 48px; height: 48px; margin-bottom: 0.5rem; opacity: 0.5; }
+
+    /* Skeleton */
+    .skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--bg-input) 50%, var(--border) 75%); background-size: 200% 100%; animation: skeleton 1.2s ease-in-out infinite; border-radius: 4px; }
+    @keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton-line { height: 0.875rem; margin-bottom: 0.5rem; }
+    .skeleton-line:last-child { width: 60%; }
+
+    /* Error state */
+    .error-inline { color: var(--error); font-size: 0.875rem; }
+    .error-inline .retry-btn { margin-top: 0.5rem; }
+
+    /* Diff */
+    .diff-toolbar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .diff-view { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg-elevated); }
+    .diff-unified { padding: 1rem; font-size: 0.8125rem; font-family: ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; }
+    .diff-unified .add { background: var(--diff-add); }
+    .diff-unified .remove { background: var(--diff-remove); }
+    .diff-split { display: grid; grid-template-columns: 1fr 1fr; }
+    .diff-split .side { padding: 1rem; font-size: 0.8125rem; font-family: ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; border-right: 1px solid var(--border); }
+    .diff-split .side:last-child { border-right: none; }
+    .diff-split .remove { background: var(--diff-remove); }
+    .diff-split .add { background: var(--diff-add); }
+    .diff-placeholder { padding: 1rem; color: var(--text-muted); font-size: 0.875rem; }
+
+    /* Drawer */
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 200; opacity: 0; visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+    .drawer-backdrop.open { opacity: 1; visibility: visible; }
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: min(320px, 100vw);
+      background: var(--bg-elevated);
+      border-left: 1px solid var(--border);
+      z-index: 201;
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      display: flex; flex-direction: column;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 0.5rem; }
+    .history-item {
+      padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem;
+      border: 1px solid var(--border); cursor: pointer;
+      font-size: 0.8125rem; transition: background 0.15s ease;
+    }
+    .history-item:hover { background: var(--bg-input); }
+    .history-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .history-item-preview { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-empty { padding: 1rem; color: var(--text-muted); font-size: 0.875rem; text-align: center; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+      z-index: 300; display: flex; flex-direction: column; gap: 0.5rem;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      opacity: 0; transform: translateY(0.5rem);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: auto;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { border-color: var(--error); color: var(--error); }
+
+    /* Utility */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header" role="banner">
+      <h1>Сравнение запросов: Baseline и With Config</h1>
+      <div class="header-actions">
+        <span id="status" class="status" aria-live="polite">Готов</span>
+        <button type="button" class="btn btn-secondary" id="historyBtn" aria-label="История запросов" title="История">История</button>
+        <button type="button" class="btn btn-secondary" id="themeBtn" aria-label="Переключить тему">Тема</button>
+        <button type="button" class="btn btn-secondary" id="newDialogBtn" aria-label="Новый диалог">Новый диалог</button>
+        <button type="submit" form="form" id="submitBtn" class="btn btn-primary">Run Both</button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <form id="form">
+        <div class="input-section">
+          <label for="user_message">Сообщение пользователя *</label>
+          <div class="textarea-wrap">
+            <textarea id="user_message" name="user_message" required placeholder="Введите запрос к модели..." aria-describedby="token_count"></textarea>
+            <button type="button" class="btn btn-secondary clear-btn" id="clearUserMsg" aria-label="Очистить поле">Очистить</button>
+          </div>
+          <div id="token_count" class="token-count" aria-live="polite">~0 токенов</div>
+        </div>
+
+        <div class="config-panel" id="configPanel">
+          <button type="button" class="config-panel-header" id="configToggle" aria-expanded="true" aria-controls="configPanelBody">
+            Настройки
+            <span aria-hidden="true" id="configChevron">▼</span>
+          </button>
+          <div class="config-panel-body" id="configPanelBody">
+            <div class="config-grid">
+              <div class="config-item">
+                <label for="system_prompt">System Prompt</label>
+                <textarea id="system_prompt" name="system_prompt" placeholder="Инструкции для модели (опционально)" rows="3"></textarea>
+              </div>
+              <div class="config-item">
+                <label>Stop Sequences (до 4, Enter или запятая)</label>
+                <div class="stop-tags-wrap" id="stopTagsWrap">
+                  <div id="stopTagsList" style="display:contents"></div>
+                  <input type="text" class="stop-tags-input" id="stopTagInput" placeholder="Добавить..." aria-label="Добавить stop sequence" />
+                </div>
+                <div class="stop-tags-hint" id="stopTagsHint">Максимум 4 последовательности</div>
+              </div>
+              <div class="config-item">
+                <label for="max_output_tokens">Max output tokens</label>
+                <input type="number" id="max_output_tokens" name="max_output_tokens" min="1" max="4096" placeholder="например 512" aria-label="Max output tokens" />
+              </div>
+              <div class="config-item">
+                <label for="model">Модель</label>
+                <select id="model" name="model">
+                  {% for m in models %}
+                  <option value="{{ m }}" {% if m == default_model %}selected{% endif %}>{{ m }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="results-wrap">
+        <div class="results-header">
+          <div class="tabs-mobile" role="tablist">
+            <button type="button" class="btn btn-secondary tabs-mobile-btn active" data-tab="baseline" role="tab" aria-selected="true">Baseline</button>
+            <button type="button" class="btn btn-secondary tabs-mobile-btn" data-tab="with-config" role="tab" aria-selected="false">With Config</button>
+          </div>
+          <div class="diff-toolbar" id="diffToolbar" style="display: none;">
+            <button type="button" class="btn btn-secondary" id="showDiffBtn">Show Diff</button>
+            <button type="button" class="btn btn-secondary" id="hideDiffBtn" style="display: none;">Hide Diff</button>
+            <div id="diffModeSwitch" style="display: none;">
+              <button type="button" class="btn btn-secondary btn-icon diff-mode-btn active" data-mode="unified" aria-pressed="true">Unified</button>
+              <button type="button" class="btn btn-secondary btn-icon diff-mode-btn" data-mode="split" aria-pressed="false">Split</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="resultsView">
+          <div class="results-columns" id="resultsColumns">
+            <div class="column column-baseline active" id="columnBaseline" data-column="baseline">
+              <div class="column-header">Baseline <button type="button" class="btn btn-secondary btn-icon copy-btn" data-copy="baseline" aria-label="Копировать ответ">Копировать</button></div>
+              <div class="column-body" id="bodyBaseline">
+                <div class="empty-state" id="emptyBaseline">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                  <p>Ответ появится здесь</p>
+                </div>
+                <div id="contentBaseline" style="display: none;"></div>
+              </div>
+              <div class="column-metrics" id="metricsBaseline" style="display: none;"></div>
+            </div>
+            <div class="column column-with-config" id="columnWithConfig" data-column="with-config">
+              <div class="column-header">With Config <button type="button" class="btn btn-secondary btn-icon copy-btn" data-copy="with-config" aria-label="Копировать ответ">Копировать</button></div>
+              <div class="column-body" id="bodyWithConfig">
+                <div class="empty-state" id="emptyWithConfig">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                  <p>Ответ с настройками появится здесь</p>
+                </div>
+                <div id="contentWithConfig" style="display: none;"></div>
+              </div>
+              <div class="column-metrics" id="metricsWithConfig" style="display: none;"></div>
+            </div>
+          </div>
+          <div class="diff-view" id="diffView" style="display: none;">
+            <div id="diffContent"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-label="История запросов" aria-hidden="true">
+    <div class="drawer-header">
+      <h2 style="margin:0; font-size:1rem;">История</h2>
+      <button type="button" class="btn btn-secondary btn-icon" id="drawerClose" aria-label="Закрыть">×</button>
+    </div>
+    <div class="drawer-body" id="historyList"></div>
+  </aside>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <script>
+(function() {
+  const STORAGE_KEYS = {
+    configCollapsed: 'compare_config_panel_collapsed',
+    theme: 'compare_theme',
+    history: 'compare_history',
+    settings: 'compare_settings',
+  };
+  const MAX_HISTORY = 10;
+  const MAX_STOP_SEQUENCES = 4;
+  const TOKEN_DEBOUNCE_MS = 300;
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function approxTokens(text) {
+    if (!text || !text.trim()) return 0;
+    return Math.ceil(text.trim().length / 4);
+  }
+
+  function toast(message, isError) {
+    const container = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast' + (isError ? ' error' : '');
+    el.textContent = message;
+    container.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 200);
+    }, 3500);
+  }
+
+  function setStatus(text, className) {
+    const status = document.getElementById('status');
+    status.textContent = text;
+    status.className = 'status' + (className ? ' ' + className : '');
+  }
+
+  let stopSequences = [];
+  const stopTagsList = document.getElementById('stopTagsList');
+  const stopTagInput = document.getElementById('stopTagInput');
+  const stopTagsHint = document.getElementById('stopTagsHint');
+
+  function renderStopTags() {
+    stopTagsList.innerHTML = '';
+    stopSequences.forEach((s, i) => {
+      const span = document.createElement('span');
+      span.className = 'stop-tag';
+      span.innerHTML = escapeHtml(s) + ' <button type="button" data-index="' + i + '" aria-label="Удалить">×</button>';
+      stopTagsList.appendChild(span);
+    });
+    stopTagsHint.textContent = stopSequences.length >= MAX_STOP_SEQUENCES ? 'Достигнут лимит (4)' : 'Максимум 4 последовательности';
+  }
+
+  function addStopSequence(val) {
+    const v = (val || '').trim();
+    if (!v || stopSequences.length >= MAX_STOP_SEQUENCES) return;
+    if (stopSequences.includes(v)) return;
+    stopSequences.push(v);
+    renderStopTags();
+    stopTagInput.value = '';
+    saveSettings();
+  }
+
+  stopTagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addStopSequence(e.key === ',' ? stopTagInput.value.replace(/,+\s*$/, '') : stopTagInput.value);
+    }
+  });
+  stopTagInput.addEventListener('blur', () => {
+    if (stopTagInput.value.trim()) addStopSequence(stopTagInput.value);
+  });
+  stopTagsList.addEventListener('click', (e) => {
+    const idx = e.target.getAttribute('data-index');
+    if (idx != null) {
+      stopSequences.splice(parseInt(idx, 10), 1);
+      renderStopTags();
+      saveSettings();
+    }
+  });
+
+  const maxOutputTokensEl = document.getElementById('max_output_tokens');
+  maxOutputTokensEl.addEventListener('change', saveSettings);
+
+  const configPanel = document.getElementById('configPanel');
+  const configToggle = document.getElementById('configToggle');
+  const configChevron = document.getElementById('configChevron');
+  const configPanelBody = document.getElementById('configPanelBody');
+  configToggle.addEventListener('click', () => {
+    const collapsed = configPanel.classList.toggle('collapsed');
+    configToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    configChevron.textContent = collapsed ? '▶' : '▼';
+    try { localStorage.setItem(STORAGE_KEYS.configCollapsed, collapsed ? '1' : '0'); } catch (_) {}
+  });
+  const savedCollapsed = localStorage.getItem(STORAGE_KEYS.configCollapsed);
+  if (savedCollapsed === '1') {
+    configPanel.classList.add('collapsed');
+    configToggle.setAttribute('aria-expanded', 'false');
+    configChevron.textContent = '▶';
+  }
+
+  const userMessageEl = document.getElementById('user_message');
+  const tokenCountEl = document.getElementById('token_count');
+  let tokenDebounce;
+  userMessageEl.addEventListener('input', () => {
+    clearTimeout(tokenDebounce);
+    tokenDebounce = setTimeout(() => {
+      tokenCountEl.textContent = '~' + approxTokens(userMessageEl.value) + ' токенов';
+      saveSettings();
+    }, TOKEN_DEBOUNCE_MS);
+  });
+  document.getElementById('clearUserMsg').addEventListener('click', () => {
+    userMessageEl.value = '';
+    tokenCountEl.textContent = '~0 токенов';
+    saveSettings();
+  });
+
+  function saveSettings() {
+    try {
+      const payload = {
+        user_message: userMessageEl.value,
+        system_prompt: document.getElementById('system_prompt').value,
+        stop_sequences: stopSequences,
+        max_output_tokens: maxOutputTokensEl.value ? parseInt(maxOutputTokensEl.value, 10) : null,
+        model: document.getElementById('model').value,
+      };
+      localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(payload));
+    } catch (_) {}
+  }
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.settings);
+      if (!raw) return;
+      const payload = JSON.parse(raw);
+      if (payload.user_message != null) userMessageEl.value = payload.user_message;
+      if (payload.system_prompt != null) document.getElementById('system_prompt').value = payload.system_prompt;
+      if (Array.isArray(payload.stop_sequences)) {
+        stopSequences = payload.stop_sequences.slice(0, MAX_STOP_SEQUENCES);
+        renderStopTags();
+      }
+      if (payload.max_output_tokens != null && payload.max_output_tokens !== '') {
+        const v = Math.min(4096, Math.max(1, parseInt(payload.max_output_tokens, 10)));
+        if (!isNaN(v)) maxOutputTokensEl.value = String(v);
+      }
+      if (payload.model != null && document.getElementById('model').querySelector('option[value="' + escapeHtml(payload.model) + '"]')) {
+        document.getElementById('model').value = payload.model;
+      }
+      tokenCountEl.textContent = '~' + approxTokens(userMessageEl.value) + ' токенов';
+    } catch (_) {}
+  }
+  loadSettings();
+
+  function clearDialog() {
+    baselineMessages = [];
+    withConfigMessages = [];
+    lastBaseline = null;
+    lastWithConfig = null;
+    document.getElementById('diffToolbar').style.display = 'none';
+    updateDiffVisibility(false);
+    document.querySelectorAll('.column-body .error-inline').forEach(el => el.remove());
+    renderDialogColumn('baseline', [], null);
+    renderDialogColumn('with-config', [], null);
+  }
+  document.getElementById('newDialogBtn').addEventListener('click', clearDialog);
+
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const html = document.documentElement;
+    const isDark = html.classList.toggle('theme-dark');
+    html.classList.toggle('theme-light', !isDark);
+    try { localStorage.setItem(STORAGE_KEYS.theme, isDark ? 'dark' : 'light'); } catch (_) {}
+  });
+  const savedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+  if (savedTheme === 'light') {
+    document.documentElement.classList.remove('theme-dark');
+    document.documentElement.classList.add('theme-light');
+  }
+
+  function getMaxOutputTokens() {
+    const v = maxOutputTokensEl.value.trim();
+    if (!v) return null;
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 1) return null;
+    return Math.min(4096, n);
+  }
+  function getPayload() {
+    return {
+      user_message: userMessageEl.value.trim(),
+      system_prompt: document.getElementById('system_prompt').value.trim() || null,
+      stop_sequences: stopSequences.slice(),
+      max_output_tokens: getMaxOutputTokens(),
+      model: document.getElementById('model').value.trim(),
+    };
+  }
+
+  function showSkeleton(id) {
+    const body = document.getElementById('body' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
+    const empty = document.getElementById('empty' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
+    const content = document.getElementById('content' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
+    const metrics = document.getElementById('metrics' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
+    empty.style.display = 'none';
+    content.style.display = 'block';
+    content.innerHTML = '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div>';
+    metrics.style.display = 'none';
+  }
+
+  function highlightStopSequences(text, stops) {
+    if (!text || !stops || stops.length === 0) return escapeHtml(text);
+    let out = '';
+    let pos = 0;
+    const segments = [];
+    for (let i = 0; i < stops.length; i++) {
+      const idx = text.indexOf(stops[i], pos);
+      if (idx !== -1) {
+        if (idx > pos) segments.push({ t: text.slice(pos, idx), stop: false });
+        segments.push({ t: stops[i], stop: true });
+        pos = idx + stops[i].length;
+      }
+    }
+    if (pos < text.length) segments.push({ t: text.slice(pos), stop: false });
+    segments.forEach(s => {
+      out += s.stop ? '<mark class="stop-highlight">' + escapeHtml(s.t) + '</mark>' : escapeHtml(s.t);
+    });
+    return out || escapeHtml(text);
+  }
+
+  function typewriter(el, text, stopSequencesForHighlight, done) {
+    el.innerHTML = '';
+    const container = document.createElement('pre');
+    container.className = 'response-text';
+    el.appendChild(container);
+    if (!text) {
+      container.textContent = '(пусто)';
+      if (done) done();
+      return;
+    }
+    const chunk = 2;
+    let i = 0;
+    function tick() {
+      if (i >= text.length) {
+        const withStops = stopSequencesForHighlight && stopSequencesForHighlight.length;
+        container.innerHTML = withStops ? highlightStopSequences(text, stopSequencesForHighlight) : escapeHtml(text);
+        if (done) done();
+        return;
+      }
+      i += chunk;
+      const slice = text.slice(0, i);
+      container.textContent = slice;
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function renderDialogColumn(columnId, messages, options) {
+    const isBaseline = columnId === 'baseline';
+    const bodyId = isBaseline ? 'bodyBaseline' : 'bodyWithConfig';
+    const contentId = isBaseline ? 'contentBaseline' : 'contentWithConfig';
+    const metricsId = isBaseline ? 'metricsBaseline' : 'metricsWithConfig';
+    const emptyId = isBaseline ? 'emptyBaseline' : 'emptyWithConfig';
+    const body = document.getElementById(bodyId);
+    const content = document.getElementById(contentId);
+    const metricsEl = document.getElementById(metricsId);
+    const empty = document.getElementById(emptyId);
+
+    if (!messages || messages.length === 0) {
+      empty.style.display = 'block';
+      content.style.display = 'none';
+      content.innerHTML = '';
+      metricsEl.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    content.style.display = 'block';
+    metricsEl.style.display = 'none';
+
+    const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant';
+    const lastAssistantData = lastIsAssistant && options ? options : null;
+    const stopForHighlight = !isBaseline && lastAssistantData && lastAssistantData.stopSequences && lastAssistantData.stopSequences.length ? lastAssistantData.stopSequences : null;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'dialog-messages';
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const isLast = i === messages.length - 1;
+      const div = document.createElement('div');
+      div.className = 'message message-' + msg.role;
+      div.innerHTML = '<div class="message-label">' + (msg.role === 'user' ? 'User' : 'Assistant') + '</div><div class="message-content"></div>';
+      const contentBlock = div.querySelector('.message-content');
+      if (isLast && msg.role === 'assistant' && lastAssistantData && lastAssistantData.text != null) {
+        typewriter(contentBlock, lastAssistantData.text || '', stopForHighlight, () => {
+          if (lastAssistantData.responseTimeMs != null || (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) || lastAssistantData.finish_reason) {
+            let html = '';
+            if (lastAssistantData.responseTimeMs != null) html += '<dt>Время</dt><dd>' + lastAssistantData.responseTimeMs + ' ms</dd>';
+            if (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) html += '<dt>Токены в ответе</dt><dd>' + lastAssistantData.usage.completion_tokens + '</dd>';
+            if (lastAssistantData.finish_reason) html += '<dt>Причина остановки</dt><dd>' + escapeHtml(lastAssistantData.finish_reason) + '</dd>';
+            if (html) {
+              metricsEl.innerHTML = '<dl>' + html + '</dl>';
+              metricsEl.style.display = 'block';
+            }
+          }
+        });
+      } else {
+        const text = msg.content || '';
+        contentBlock.innerHTML = stopForHighlight && msg.role === 'assistant' && isLast ? highlightStopSequences(text, stopForHighlight) : escapeHtml(text);
+      }
+      wrap.appendChild(div);
+    }
+    content.innerHTML = '';
+    content.appendChild(wrap);
+  }
+
+  function renderResult(columnId, data, responseTimeMs, stopSeqsForConfig) {
+    const isBaseline = columnId === 'baseline';
+    const contentId = isBaseline ? 'contentBaseline' : 'contentWithConfig';
+    const metricsId = isBaseline ? 'metricsBaseline' : 'metricsWithConfig';
+    const emptyId = isBaseline ? 'emptyBaseline' : 'emptyWithConfig';
+    document.getElementById(emptyId).style.display = 'none';
+    document.getElementById(contentId).style.display = 'block';
+    if (data.error) {
+      document.getElementById(contentId).innerHTML = '<div class="error-inline">' + escapeHtml(data.error) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
+      document.getElementById(metricsId).style.display = 'none';
+      document.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+      return;
+    }
+    const messages = isBaseline ? baselineMessages : withConfigMessages;
+    const opts = { text: data.text, stopSequences: !isBaseline ? stopSeqsForConfig : null, responseTimeMs, usage: data.usage, finish_reason: data.finish_reason };
+    renderDialogColumn(columnId, messages, opts);
+  }
+
+  function simpleLineDiff(a, b) {
+    const linesA = a.split(/\n/);
+    const linesB = b.split(/\n/);
+    const result = [];
+    const m = linesA.length, n = linesB.length;
+    const lcs = [];
+    for (let i = 0; i <= m; i++) { lcs[i] = []; lcs[i][0] = 0; }
+    for (let j = 0; j <= n; j++) lcs[0][j] = 0;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (linesA[i - 1] === linesB[j - 1]) lcs[i][j] = lcs[i - 1][j - 1] + 1;
+        else lcs[i][j] = Math.max(lcs[i - 1][j], lcs[i][j - 1]);
+      }
+    }
+    let i = m, j = n;
+    const rev = [];
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && linesA[i - 1] === linesB[j - 1]) {
+        rev.push({ type: 'same', a: linesA[i - 1], b: linesB[j - 1] });
+        i--; j--;
+      } else if (j > 0 && (i === 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
+        rev.push({ type: 'add', b: linesB[j - 1] });
+        j--;
+      } else {
+        rev.push({ type: 'remove', a: linesA[i - 1] });
+        i--;
+      }
+    }
+    return rev.reverse();
+  }
+
+  function renderDiffUnified(diff) {
+    let html = '';
+    diff.forEach(d => {
+      if (d.type === 'same') html += '<div>' + escapeHtml(d.a) + '</div>';
+      else if (d.type === 'add') html += '<div class="add">+' + escapeHtml(d.b) + '</div>';
+      else if (d.type === 'remove') html += '<div class="remove">-' + escapeHtml(d.a) + '</div>';
+    });
+    return html;
+  }
+  function renderDiffSplit(diff) {
+    let left = '', right = '';
+    diff.forEach(d => {
+      if (d.type === 'same') {
+        left += escapeHtml(d.a) + '\n';
+        right += escapeHtml(d.b) + '\n';
+      } else if (d.type === 'add') {
+        right += '<span class="add">' + escapeHtml(d.b) + '</span>\n';
+      } else if (d.type === 'remove') {
+        left += '<span class="remove">' + escapeHtml(d.a) + '</span>\n';
+      }
+    });
+    return { left, right };
+  }
+
+  let lastBaseline = null;
+  let lastWithConfig = null;
+  let lastPayload = null;
+  let diffMode = 'unified';
+  let baselineMessages = [];
+  let withConfigMessages = [];
+
+  const diffToolbar = document.getElementById('diffToolbar');
+  const showDiffBtn = document.getElementById('showDiffBtn');
+  const hideDiffBtn = document.getElementById('hideDiffBtn');
+  const diffModeSwitch = document.getElementById('diffModeSwitch');
+  const diffView = document.getElementById('diffView');
+  const diffContent = document.getElementById('diffContent');
+  const resultsColumns = document.getElementById('resultsColumns');
+
+  function updateDiffVisibility(show) {
+    resultsColumns.style.display = show ? 'none' : 'grid';
+    diffView.style.display = show ? 'block' : 'none';
+    showDiffBtn.style.display = show ? 'none' : 'inline-block';
+    hideDiffBtn.style.display = show ? 'inline-block' : 'none';
+    diffModeSwitch.style.display = show ? 'flex' : 'none';
+    if (show && lastBaseline != null && lastWithConfig != null) {
+      const diff = simpleLineDiff(lastBaseline.text || '', lastWithConfig.text || '');
+      if (diffMode === 'unified') {
+        diffContent.innerHTML = '<div class="diff-unified">' + renderDiffUnified(diff) + '</div>';
+      } else {
+        const { left, right } = renderDiffSplit(diff);
+        diffContent.innerHTML = '<div class="diff-split"><div class="side">' + left + '</div><div class="side">' + right + '</div></div>';
+      }
+    }
+  }
+  showDiffBtn.addEventListener('click', () => updateDiffVisibility(true));
+  hideDiffBtn.addEventListener('click', () => updateDiffVisibility(false));
+  document.querySelectorAll('.diff-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      diffMode = btn.getAttribute('data-mode');
+      document.querySelectorAll('.diff-mode-btn').forEach(b => { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); b.classList.toggle('active', b === btn); });
+      updateDiffVisibility(true);
+    });
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const which = btn.getAttribute('data-copy');
+      const text = which === 'baseline' ? (lastBaseline && lastBaseline.text) : (lastWithConfig && lastWithConfig.text);
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => toast('Скопировано'), () => toast('Не удалось скопировать', true));
+    });
+  });
+
+  const tabsMobile = document.querySelectorAll('.tabs-mobile-btn');
+  const columns = document.querySelectorAll('.results-columns .column');
+  tabsMobile.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.getAttribute('data-tab');
+      tabsMobile.forEach(t => { t.classList.toggle('active', t === tab); t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
+      columns.forEach(col => { col.classList.toggle('active', col.getAttribute('data-column') === tabName); });
+    });
+  });
+
+  function addToHistory(payload) {
+    try {
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || '[]'); } catch (_) {}
+      list.unshift({
+        user_message: payload.user_message,
+        system_prompt: payload.system_prompt,
+        stop_sequences: payload.stop_sequences,
+        max_output_tokens: payload.max_output_tokens,
+        model: payload.model,
+        ts: Date.now(),
+      });
+      list = list.slice(0, MAX_HISTORY);
+      localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(list));
+      renderHistory();
+    } catch (_) {}
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('historyList');
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || '[]'); } catch (_) {}
+    if (list.length === 0) {
+      container.innerHTML = '<div class="history-empty">Нет записей</div>';
+      return;
+    }
+    container.innerHTML = '';
+    list.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'history-item';
+      div.tabIndex = 0;
+      div.setAttribute('role', 'button');
+      div.innerHTML = '<div class="history-item-preview">' + escapeHtml((item.user_message || '').slice(0, 80)) + (item.user_message && item.user_message.length > 80 ? '…' : '') + '</div>';
+      div.addEventListener('click', () => restoreHistory(item));
+      div.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); restoreHistory(item); } });
+      container.appendChild(div);
+    });
+  }
+
+  function restoreHistory(item) {
+    clearDialog();
+    userMessageEl.value = item.user_message || '';
+    document.getElementById('system_prompt').value = item.system_prompt || '';
+    stopSequences = Array.isArray(item.stop_sequences) ? item.stop_sequences.slice(0, MAX_STOP_SEQUENCES) : [];
+    renderStopTags();
+    const maxV = item.max_output_tokens != null ? Math.min(4096, Math.max(1, parseInt(item.max_output_tokens, 10))) : '';
+    maxOutputTokensEl.value = maxV === '' ? '' : String(maxV);
+    const modelSelect = document.getElementById('model');
+    if (item.model && [].some.call(modelSelect.options, o => o.value === item.model)) modelSelect.value = item.model;
+    tokenCountEl.textContent = '~' + approxTokens(userMessageEl.value) + ' токенов';
+    closeDrawer();
+    saveSettings();
+  }
+
+  const drawer = document.getElementById('drawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  document.getElementById('historyBtn').addEventListener('click', () => {
+    renderHistory();
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    drawerBackdrop.classList.add('open');
+    drawerBackdrop.setAttribute('aria-hidden', 'false');
+  });
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    drawerBackdrop.classList.remove('open');
+    drawerBackdrop.setAttribute('aria-hidden', 'true');
+  }
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) { closeDrawer(); }
+  });
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user_message = userMessageEl.value.trim();
+    if (!user_message) return;
+
+    baselineMessages.push({ role: 'user', content: user_message });
+    withConfigMessages.push({ role: 'user', content: user_message });
+
+    const payload = getPayload();
+    lastPayload = payload;
+    setStatus('Загрузка…', 'loading');
+    document.getElementById('submitBtn').disabled = true;
+    showSkeleton('baseline');
+    showSkeleton('with-config');
+    document.getElementById('diffToolbar').style.display = 'none';
+    updateDiffVisibility(false);
+
+    const t0 = performance.now();
+    let data;
+    try {
+      const res = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_message: payload.user_message,
+          system_prompt: payload.system_prompt,
+          stop_sequences: payload.stop_sequences,
+          max_output_tokens: payload.max_output_tokens,
+          model: payload.model,
+          baseline_messages: baselineMessages,
+          with_config_messages: withConfigMessages,
+        }),
+      });
+      const elapsed = Math.round(performance.now() - t0);
+      data = await res.json();
+      if (!res.ok) {
+        baselineMessages.pop();
+        withConfigMessages.pop();
+        setStatus('Ошибка: ' + (data.error || res.status), 'error');
+        toast(data.error || 'Ошибка запроса', true);
+        document.getElementById('contentBaseline').innerHTML = '<div class="error-inline">' + escapeHtml(data.error || res.status) + '</div>';
+        document.getElementById('contentBaseline').style.display = 'block';
+        document.getElementById('emptyBaseline').style.display = 'none';
+        document.getElementById('emptyWithConfig').style.display = 'none';
+        document.getElementById('contentWithConfig').style.display = 'none';
+        document.getElementById('submitBtn').disabled = false;
+        return;
+      }
+
+      const baselineErr = data.without_config.error;
+      const withConfigErr = data.with_config.error;
+      if (baselineErr || withConfigErr) {
+        baselineMessages.pop();
+        withConfigMessages.pop();
+        renderDialogColumn('baseline', baselineMessages, null);
+        renderDialogColumn('with-config', withConfigMessages, null);
+        if (baselineErr) {
+          const bodyBaseline = document.getElementById('bodyBaseline');
+          const errDiv = document.createElement('div');
+          errDiv.className = 'error-inline';
+          errDiv.innerHTML = escapeHtml(baselineErr) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button>';
+          errDiv.querySelector('.retry-btn').addEventListener('click', () => document.getElementById('form').requestSubmit());
+          bodyBaseline.appendChild(errDiv);
+        }
+        if (withConfigErr) {
+          const bodyWithConfig = document.getElementById('bodyWithConfig');
+          const errDiv = document.createElement('div');
+          errDiv.className = 'error-inline';
+          errDiv.innerHTML = escapeHtml(withConfigErr) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button>';
+          errDiv.querySelector('.retry-btn').addEventListener('click', () => document.getElementById('form').requestSubmit());
+          bodyWithConfig.appendChild(errDiv);
+        }
+        setStatus('Частичная ошибка', 'error');
+        document.getElementById('submitBtn').disabled = false;
+        return;
+      }
+
+      baselineMessages.push({ role: 'assistant', content: data.without_config.text || '' });
+      withConfigMessages.push({ role: 'assistant', content: data.with_config.text || '' });
+      lastBaseline = { text: data.without_config.text, error: null, usage: data.without_config.usage, finish_reason: data.without_config.finish_reason };
+      lastWithConfig = { text: data.with_config.text, error: null, usage: data.with_config.usage, finish_reason: data.with_config.finish_reason };
+
+      renderResult('baseline', data.without_config, elapsed, null);
+      renderResult('with-config', data.with_config, elapsed, payload.stop_sequences);
+      userMessageEl.value = '';
+      tokenCountEl.textContent = '~0 токенов';
+
+      setStatus('Готово', '');
+      diffToolbar.style.display = 'flex';
+      showDiffBtn.style.display = 'inline-block';
+      addToHistory({ ...payload, user_message });
+    } catch (err) {
+      baselineMessages.pop();
+      withConfigMessages.pop();
+      setStatus('Ошибка', 'error');
+      toast(String(err.message || err), true);
+      document.getElementById('contentBaseline').innerHTML = '<div class="error-inline">' + escapeHtml(String(err.message || err)) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
+      document.getElementById('contentBaseline').style.display = 'block';
+      document.getElementById('emptyBaseline').style.display = 'none';
+      document.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+    } finally {
+      document.getElementById('submitBtn').disabled = false;
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      document.getElementById('form').requestSubmit();
+    }
+    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      userMessageEl.value = '';
+      tokenCountEl.textContent = '~0 токенов';
+      saveSettings();
+    }
+  });
+
+  renderHistory();
+})();
+  </script>
+</body>
+</html>
