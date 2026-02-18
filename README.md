@@ -92,32 +92,45 @@ AI: 4
 You: /exit
 ```
 
-## Web UI: сравнение с конфигом и без
+## Web UI: сравнение нескольких чатов с разными настройками
 
-Веб-интерфейс для отправки одного запроса **дважды** (параллельно): с настройками и без. Удобно сравнивать влияние System prompt, Stop sequence и Max output tokens.
+Веб-интерфейс для параллельного запуска **нескольких чатов** с разными конфигами: один общий запрос пользователя отправляется во все чаты, ответы отображаются в колонках.
 
-После установки зависимостей запустите:
+**Возможности:**
+
+- **Несколько чатов** — по умолчанию один, можно добавлять и удалять. У каждого чата свой набор настроек и своя история диалога.
+- **Настройки на чат:** System prompt, Stop sequences (теги, до 4), Max output tokens, модель, опциональные параметры сэмплирования (temperature, top_p, frequency_penalty, presence_penalty, seed) с чекбоксом «Включить» — в API уходят только включённые и заполненные.
+- **Имена чатов** — можно задать кастомное название (иначе «Чат 1», «Чат 2»).
+- **Продолжить диалог** — чекбокс под полем ввода: если выключен, запрос уходит без истории (один тур); если включен — с полной историей чата.
+- **Оценить** — модуль Evaluator (LLM-as-Judge): ранжирование ответов по критериям, баллы, сильные/слабые стороны, рекомендации, сравнение топ-2. Пресеты весов: Общий, Код, Факты, Текст. Вывод на русском.
+- **История запросов** — боковая панель (drawer), последние запросы в localStorage, восстановление по клику.
+- **Diff** — после получения ответов можно включить сравнение двух колонок (unified/split).
+- **Тема** — переключатель светлая/тёмная, настройки сохраняются в localStorage.
+
+**Запуск:**
 
 ```bash
 source .venv/bin/activate
 flask --app web_app run
 ```
 
-Если порт 5000 занят (например, «Приёмник AirPlay» на macOS), укажите другой порт:
+Если порт 5000 занят (например, «Приёмник AirPlay» на macOS):
 
 ```bash
 flask --app web_app run --port 5001
 ```
 
-Откройте в браузере: **http://127.0.0.1:5000** (или **http://127.0.0.1:5001** при запуске с `--port 5001`)
+Откройте в браузере: **http://127.0.0.1:5000** (или 5001 при `--port 5001`).
 
-В форме укажите (опционально): System prompt, Stop sequence (по одной на строку, до 4), Max output tokens. Введите сообщение пользователя и нажмите «Отправить оба запроса». Слева отобразится ответ **с конфигом**, справа — **без конфига** (только текст пользователя, без system/stop/max_tokens). Веб-сравнение использует **Chat Completions API** и по умолчанию модели с поддержкой stop: **gpt-4o**, gpt-4o-mini, gpt-4-turbo, gpt-4 (выбор в форме). CLI-чат по-прежнему использует Responses API.
+Введите сообщение, при необходимости настройте каждый чат в своей карточке и нажмите **Run**. Ответы появятся в колонках; затем можно нажать **Оценить** для ранжирования. Веб-интерфейс использует **Chat Completions API** и поддерживает множество моделей (gpt-4o, gpt-4o-mini, gpt-3.5-turbo, o1, o1-mini и др.). CLI-чат использует Responses API.
 
 ## Project layout
 
-- `main.py` — Entry point: argparse, `load_dotenv()`, `OPENAI_API_KEY` check, calls `run_chat`.
-- `chat_cli.py` — Chat loop, `/system` / `/assistant` / `/reset` / `/exit`, retry around API calls.
-- `openai_client.py` — OpenAI client: `stream_message()` (Responses API, CLI), `create_message_chat()` (Chat Completions, web compare).
-- `web_app.py` — Flask app: маршруты `/` и `POST /api/compare`, параллельный вызов двух запросов.
-- `templates/index.html` — форма (system, stop, max_tokens, user message) и два блока для ответов.
-- `requirements.txt` — `openai`, `python-dotenv`, `flask`.
+- `main.py` — Точка входа CLI: argparse, `load_dotenv()`, проверка `OPENAI_API_KEY`, вызов `run_chat`.
+- `chat_cli.py` — Цикл чата: команды `/system`, `/assistant`, `/reset`, `/exit`, retry при вызовах API.
+- `openai_client.py` — Клиент OpenAI: `stream_message()` (Responses API, CLI), `create_message_chat()` (Chat Completions, веб).
+- `web_app.py` — Flask: маршруты `/`, `POST /api/compare`, `POST /api/compare-many`, `POST /api/evaluate`, `GET /api/evaluate/last`.
+- `templates/index.html` — Веб-форма: общее поле ввода, список чатов с настройками, колонки результатов, Evaluator, история, diff, тема.
+- `evaluator/` — Модуль оценки ответов: классификация вопроса, LLM-as-Judge, эвристический fallback, схемы (Pydantic), промпты, защита от prompt injection.
+- `tests/` — Тесты (в т.ч. `test_evaluator.py`: парсинг JSON, injection, fallback).
+- `requirements.txt` — `openai`, `python-dotenv`, `flask`, `pydantic`, `pytest`.
