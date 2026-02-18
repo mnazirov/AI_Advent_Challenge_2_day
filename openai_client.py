@@ -8,9 +8,25 @@ from openai import OpenAI
 
 DEFAULT_MODEL = "gpt-5.2"
 
-# Модели с поддержкой stop для веб-сравнения (Chat Completions)
-CHAT_MODELS_WITH_STOP = ("gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4")
+# Современные модели для веб-сравнения (Chat Completions API)
+CHAT_MODELS = (
+    "gpt-5.2",
+    "gpt-5.2-instant",
+    "gpt-5.2-thinking",
+    "gpt-5.2-pro",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+    "o1",
+    "o1-mini",
+    "o3-mini",
+)
 DEFAULT_CHAT_MODEL = "gpt-4o"
+
+# Модели без поддержки параметров сэмплирования (temperature, top_p, penalties, seed)
+MODELS_WITHOUT_SAMPLING = frozenset(("o1", "o1-mini", "o3-mini", "gpt-5.2-thinking"))
 
 
 def _build_first_input(
@@ -156,12 +172,19 @@ def create_message_chat(
     max_output_tokens: int | None = None,
     stop_sequences: list[str] | None = None,
     messages: list[dict[str, str]] | None = None,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    frequency_penalty: float | None = None,
+    presence_penalty: float | None = None,
+    seed: int | None = None,
 ) -> dict[str, Any]:
     """
-    Chat Completions API: one shot, no streaming. Supports system, stop, max_tokens.
+    Chat Completions API: one shot, no streaming. Supports system, stop, max_tokens, sampling params.
     Used for web UI comparison (with and without config).
     If messages is provided and non-empty, uses them (with optional system_prompt prepended).
     Otherwise builds from user_text (single turn).
+    Sampling params (temperature, top_p, frequency_penalty, presence_penalty, seed) are only sent
+    for models not in MODELS_WITHOUT_SAMPLING.
     Returns dict with text, usage (completion_tokens), finish_reason.
     """
     if messages:
@@ -184,6 +207,18 @@ def create_message_chat(
         kwargs["max_completion_tokens"] = max_output_tokens
     if stop_sequences:
         kwargs["stop"] = stop_sequences[:4]  # API allows up to 4
+
+    if model not in MODELS_WITHOUT_SAMPLING:
+        if temperature is not None:
+            kwargs["temperature"] = max(0.0, min(2.0, float(temperature)))
+        if top_p is not None:
+            kwargs["top_p"] = max(0.0, min(1.0, float(top_p)))
+        if frequency_penalty is not None:
+            kwargs["frequency_penalty"] = max(-2.0, min(2.0, float(frequency_penalty)))
+        if presence_penalty is not None:
+            kwargs["presence_penalty"] = max(-2.0, min(2.0, float(presence_penalty)))
+        if seed is not None:
+            kwargs["seed"] = int(seed)
 
     try:
         response = client.chat.completions.create(**kwargs)

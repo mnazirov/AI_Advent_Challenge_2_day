@@ -44,6 +44,7 @@
       line-height: 1.5;
     }
     .app { max-width: 1400px; margin: 0 auto; padding: 0 1rem 2rem; }
+    :root { --chat-block-width: 380px; }
 
     /* Sticky header */
     .header {
@@ -60,6 +61,9 @@
     }
     .header h1 { font-size: 1.125rem; font-weight: 600; margin: 0; }
     .header-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+    .header-actions > * { height: 2.25rem; box-sizing: border-box; display: inline-flex; align-items: center; }
+    .header-actions .btn { padding-top: 0; padding-bottom: 0; }
+    .header-actions .eval-preset-select { height: 2.25rem; padding-top: 0; padding-bottom: 0; min-width: 6rem; }
     .status { font-size: 0.875rem; color: var(--text-muted); }
     .status.loading { color: var(--accent); }
     .status.error { color: var(--error); }
@@ -79,6 +83,7 @@
     .btn-secondary:hover:not(:disabled) { background: var(--bg-input); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-icon { padding: 0.5rem; }
+    .eval-preset-select { padding: 0.4rem 0.5rem; font-size: 0.8125rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); }
 
     /* Main layout */
     .main-content { padding-top: 1rem; }
@@ -101,6 +106,9 @@
     }
     textarea { min-height: 120px; resize: vertical; }
     .token-count { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .continue-dialog-label { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; font-weight: 500; margin-top: 0.5rem; cursor: pointer; }
+    .continue-dialog-label input { margin: 0; }
+    .input-hint { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
     .clear-btn { position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; }
 
     /* Config panel */
@@ -124,6 +132,16 @@
     .config-panel.collapsed .config-panel-body { display: none; }
     .config-grid { display: grid; gap: 0.75rem; }
     .config-item label { display: block; font-size: 0.8125rem; font-weight: 500; margin-bottom: 0.25rem; }
+    .config-section { margin-top: 0.75rem; }
+    .config-section-title { font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .param-hint { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .param-hint-block { margin-bottom: 0.5rem; }
+    .sampling-unavailable-hint { color: var(--baseline); }
+    .sampling-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .sampling-fields .config-item:last-child:nth-child(odd) { grid-column: span 2; }
+    .sampling-fields input:disabled { opacity: 0.6; cursor: not-allowed; }
+    .sampling-fields .param-checkbox { display: flex; align-items: center; gap: 0.5rem; }
+    .sampling-fields .param-checkbox input[type="checkbox"] { margin: 0; }
 
     /* Stop sequences tags */
     .stop-tags-wrap {
@@ -161,28 +179,63 @@
     .stop-tags-input:focus { outline: none; }
     .stop-tags-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
 
-    /* Max tokens slider */
-    /* Results: split view */
+    /* Horizontal scroll: each chat = one block (config + column), fixed width */
+    .chats-and-results-scroll {
+      overflow-x: auto;
+      overflow-y: visible;
+      display: flex;
+      gap: 1rem;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chats-and-results-scroll::-webkit-scrollbar { height: 8px; }
+    .chats-and-results-scroll::-webkit-scrollbar-track { background: var(--bg-elevated); border-radius: 4px; }
+    .chats-and-results-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .chat-block {
+      flex: 0 0 var(--chat-block-width, 380px);
+      width: var(--chat-block-width, 380px);
+      min-width: var(--chat-block-width, 380px);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .chat-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-elevated);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .chat-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .chat-card-header-actions { display: flex; align-items: center; gap: 0.5rem; }
+    .chat-card .config-panel { margin-bottom: 0; border: none; border-radius: 0; border-top: 1px solid var(--border); }
+    .chat-card .config-panel-header { border-radius: 0; }
+    .chat-block .column { flex: 1; min-height: 200px; display: flex; flex-direction: column; }
+    .chat-block .column-body { flex: 1; }
+    .btn-add-chat { margin-bottom: 1rem; flex-shrink: 0; }
+    .btn-remove-chat { font-size: 0.8125rem; padding: 0.25rem 0.5rem; }
+    .btn-remove-chat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Results header (tabs + diff) */
     .results-wrap { margin-top: 1.5rem; }
     .results-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .tabs-mobile { display: none; }
     @media (max-width: 767px) {
       .tabs-mobile { display: flex; gap: 0.25rem; }
       .tabs-mobile .btn { flex: 1; }
-      .results-columns .column { display: none; }
-      .results-columns .column.active { display: block; }
+      .chats-and-results-scroll .chat-block .column { display: none; }
+      .chats-and-results-scroll .chat-block .column.active { display: flex !important; }
     }
     @media (min-width: 768px) {
       .tabs-mobile { display: none !important; }
-      .results-columns .column { display: block !important; }
-    }
-    .results-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    @media (max-width: 767px) {
-      .results-columns { grid-template-columns: 1fr; }
+      .chats-and-results-scroll .chat-block .column { display: flex !important; }
     }
     .column {
       border: 1px solid var(--border);
@@ -310,6 +363,35 @@
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.error { border-color: var(--error); color: var(--error); }
 
+    /* Evaluation block */
+    .eval-section { margin-top: 1.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-elevated); overflow: hidden; }
+    .eval-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+    .eval-winner { padding: 1rem 1rem; font-weight: 600; font-size: 1rem; color: var(--accent); border-bottom: 1px solid var(--border); }
+    .eval-subtitle { font-size: 0.9375rem; font-weight: 600; color: var(--text-muted); margin: 0 0 0.5rem 0; }
+    .eval-subtitle-top2 { margin-top: 1rem; }
+    .eval-ranking { padding: 1rem; }
+    .eval-ranking .eval-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .eval-ranking .eval-table thead { background: var(--bg-input); }
+    .eval-ranking .eval-table th, .eval-ranking .eval-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .eval-ranking .eval-table .eval-th-score, .eval-ranking .eval-table .eval-td-score { text-align: right; }
+    .eval-ranking .eval-table tbody tr:nth-child(even) { background: var(--bg-input); }
+    .eval-details { padding: 1rem; }
+    .eval-criteria-list { margin: 0; padding-left: 1.2rem; }
+    .eval-run-card { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 0.75rem; overflow: hidden; }
+    .eval-run-card:last-child { margin-bottom: 0; }
+    .eval-run-header { width: 100%; padding: 0.6rem 0.75rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 500; font-size: 0.875rem; text-align: left; border: none; background: var(--bg-elevated); color: inherit; }
+    .eval-run-header:hover { background: var(--bg-input); }
+    .eval-run-header:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .eval-run-body { padding: 0.75rem 1rem; border-top: 1px solid var(--border); font-size: 0.8125rem; background: var(--bg); }
+    .eval-run-body dl { margin: 0.35rem 0; }
+    .eval-run-body dt { font-weight: 600; color: var(--text-muted); font-size: 0.8125rem; }
+    .eval-top2-card { border: 1px solid var(--accent); border-radius: 6px; overflow: hidden; background: var(--bg); }
+    .eval-top2-card .eval-run-body { border-top: none; }
+    .eval-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .eval-badge { font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 4px; background: var(--bg-input); color: var(--text-muted); }
+    .eval-badge.fallback { background: var(--baseline); color: var(--bg); }
+    .eval-badge.confidence { background: var(--accent); color: #fff; }
+
     /* Utility */
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
   </style>
@@ -317,13 +399,20 @@
 <body>
   <div class="app">
     <header class="header" role="banner">
-      <h1>Сравнение запросов: Baseline и With Config</h1>
+      <h1>Сравнение запросов: несколько чатов</h1>
       <div class="header-actions">
         <span id="status" class="status" aria-live="polite">Готов</span>
         <button type="button" class="btn btn-secondary" id="historyBtn" aria-label="История запросов" title="История">История</button>
         <button type="button" class="btn btn-secondary" id="themeBtn" aria-label="Переключить тему">Тема</button>
         <button type="button" class="btn btn-secondary" id="newDialogBtn" aria-label="Новый диалог">Новый диалог</button>
-        <button type="submit" form="form" id="submitBtn" class="btn btn-primary">Run Both</button>
+        <select id="evalPreset" class="eval-preset-select" aria-label="Пресет критериев оценки" title="Код / Факты / Текст / Общий">
+          <option value="general">Общий</option>
+          <option value="code">Код</option>
+          <option value="factual">Факты</option>
+          <option value="writing">Текст</option>
+        </select>
+        <button type="button" class="btn btn-secondary" id="evaluateBtn" aria-label="Оценить ответы">Оценить</button>
+        <button type="submit" form="form" id="submitBtn" class="btn btn-primary">Run</button>
       </div>
     </header>
 
@@ -336,50 +425,15 @@
             <button type="button" class="btn btn-secondary clear-btn" id="clearUserMsg" aria-label="Очистить поле">Очистить</button>
           </div>
           <div id="token_count" class="token-count" aria-live="polite">~0 токенов</div>
+          <label class="continue-dialog-label">
+            <input type="checkbox" id="continueDialog" name="continue_dialog" checked aria-describedby="continue_dialog_hint" />
+            <span>Продолжить диалог</span>
+          </label>
+          <span id="continue_dialog_hint" class="input-hint">Если выключено, запрос отправится без истории (один тур)</span>
         </div>
 
-        <div class="config-panel" id="configPanel">
-          <button type="button" class="config-panel-header" id="configToggle" aria-expanded="true" aria-controls="configPanelBody">
-            Настройки
-            <span aria-hidden="true" id="configChevron">▼</span>
-          </button>
-          <div class="config-panel-body" id="configPanelBody">
-            <div class="config-grid">
-              <div class="config-item">
-                <label for="system_prompt">System Prompt</label>
-                <textarea id="system_prompt" name="system_prompt" placeholder="Инструкции для модели (опционально)" rows="3"></textarea>
-              </div>
-              <div class="config-item">
-                <label>Stop Sequences (до 4, Enter или запятая)</label>
-                <div class="stop-tags-wrap" id="stopTagsWrap">
-                  <div id="stopTagsList" style="display:contents"></div>
-                  <input type="text" class="stop-tags-input" id="stopTagInput" placeholder="Добавить..." aria-label="Добавить stop sequence" />
-                </div>
-                <div class="stop-tags-hint" id="stopTagsHint">Максимум 4 последовательности</div>
-              </div>
-              <div class="config-item">
-                <label for="max_output_tokens">Max output tokens</label>
-                <input type="number" id="max_output_tokens" name="max_output_tokens" min="1" max="4096" placeholder="например 512" aria-label="Max output tokens" />
-              </div>
-              <div class="config-item">
-                <label for="model">Модель</label>
-                <select id="model" name="model">
-                  {% for m in models %}
-                  <option value="{{ m }}" {% if m == default_model %}selected{% endif %}>{{ m }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      </form>
-
-      <div class="results-wrap">
         <div class="results-header">
-          <div class="tabs-mobile" role="tablist">
-            <button type="button" class="btn btn-secondary tabs-mobile-btn active" data-tab="baseline" role="tab" aria-selected="true">Baseline</button>
-            <button type="button" class="btn btn-secondary tabs-mobile-btn" data-tab="with-config" role="tab" aria-selected="false">With Config</button>
-          </div>
+          <div class="tabs-mobile" id="tabsMobile" role="tablist"></div>
           <div class="diff-toolbar" id="diffToolbar" style="display: none;">
             <button type="button" class="btn btn-secondary" id="showDiffBtn">Show Diff</button>
             <button type="button" class="btn btn-secondary" id="hideDiffBtn" style="display: none;">Hide Diff</button>
@@ -390,36 +444,24 @@
           </div>
         </div>
 
-        <div id="resultsView">
-          <div class="results-columns" id="resultsColumns">
-            <div class="column column-baseline active" id="columnBaseline" data-column="baseline">
-              <div class="column-header">Baseline <button type="button" class="btn btn-secondary btn-icon copy-btn" data-copy="baseline" aria-label="Копировать ответ">Копировать</button></div>
-              <div class="column-body" id="bodyBaseline">
-                <div class="empty-state" id="emptyBaseline">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                  <p>Ответ появится здесь</p>
-                </div>
-                <div id="contentBaseline" style="display: none;"></div>
-              </div>
-              <div class="column-metrics" id="metricsBaseline" style="display: none;"></div>
-            </div>
-            <div class="column column-with-config" id="columnWithConfig" data-column="with-config">
-              <div class="column-header">With Config <button type="button" class="btn btn-secondary btn-icon copy-btn" data-copy="with-config" aria-label="Копировать ответ">Копировать</button></div>
-              <div class="column-body" id="bodyWithConfig">
-                <div class="empty-state" id="emptyWithConfig">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                  <p>Ответ с настройками появится здесь</p>
-                </div>
-                <div id="contentWithConfig" style="display: none;"></div>
-              </div>
-              <div class="column-metrics" id="metricsWithConfig" style="display: none;"></div>
-            </div>
-          </div>
-          <div class="diff-view" id="diffView" style="display: none;">
-            <div id="diffContent"></div>
-          </div>
+        <div class="chats-and-results-scroll" id="chatsAndResultsScroll" aria-label="Чаты и результаты"></div>
+        <button type="button" class="btn btn-secondary btn-add-chat" id="addChatBtn" aria-label="Добавить чат">Добавить чат</button>
+      </form>
+
+      <div class="results-wrap" id="resultsView">
+        <div class="diff-view" id="diffView" style="display: none;">
+          <div id="diffContent"></div>
         </div>
       </div>
+
+      <section class="eval-section" id="evalSection" style="display: none;" aria-label="Результаты оценки">
+        <div class="eval-toolbar">
+          <span class="eval-badges" id="evalBadges"></span>
+        </div>
+        <div class="eval-winner" id="evalWinner"></div>
+        <div class="eval-ranking" id="evalRanking"></div>
+        <div class="eval-details" id="evalDetails"></div>
+      </section>
     </main>
   </div>
 
@@ -435,7 +477,15 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <script>
+  window.MODELS_WITHOUT_SAMPLING = {{ models_without_sampling|tojson }};
+  window.CHAT_MODELS = {{ models|tojson }};
+  window.DEFAULT_CHAT_MODEL = {{ default_model|tojson }};
+  </script>
+  <script>
 (function() {
+  const MODELS_WITHOUT_SAMPLING = new Set(window.MODELS_WITHOUT_SAMPLING || []);
+  const CHAT_MODELS = window.CHAT_MODELS || [];
+  const DEFAULT_CHAT_MODEL = window.DEFAULT_CHAT_MODEL || (CHAT_MODELS[0] || 'gpt-4o-mini');
   const STORAGE_KEYS = {
     configCollapsed: 'compare_config_panel_collapsed',
     theme: 'compare_theme',
@@ -443,8 +493,41 @@
     settings: 'compare_settings',
   };
   const MAX_HISTORY = 10;
+  const MAX_RUNS = 10;
   const MAX_STOP_SEQUENCES = 4;
   const TOKEN_DEBOUNCE_MS = 300;
+
+  function getDefaultConfig() {
+    return {
+      system_prompt: '',
+      stop_sequences: [],
+      max_output_tokens: null,
+      model: DEFAULT_CHAT_MODEL,
+      temperature_enabled: false,
+      temperature: null,
+      top_p_enabled: false,
+      top_p: null,
+      frequency_penalty_enabled: false,
+      frequency_penalty: null,
+      presence_penalty_enabled: false,
+      presence_penalty: null,
+      seed_enabled: false,
+      seed: null,
+    };
+  }
+
+  let nextChatId = 1;
+  let chats = [{ id: 'chat_0', name: null, config: getDefaultConfig(), messages: [] }];
+  const scrollContainer = document.getElementById('chatsAndResultsScroll');
+  const addChatBtn = document.getElementById('addChatBtn');
+
+  function getChatLabel(chat, index) {
+    return (chat.name && String(chat.name).trim()) ? String(chat.name).trim() : ('Чат ' + (index + 1));
+  }
+
+  function getColumnEl(index) {
+    return scrollContainer.querySelector('.chat-block[data-chat-index="' + index + '"] .column');
+  }
 
   function escapeHtml(s) {
     const div = document.createElement('div');
@@ -476,70 +559,6 @@
     status.className = 'status' + (className ? ' ' + className : '');
   }
 
-  let stopSequences = [];
-  const stopTagsList = document.getElementById('stopTagsList');
-  const stopTagInput = document.getElementById('stopTagInput');
-  const stopTagsHint = document.getElementById('stopTagsHint');
-
-  function renderStopTags() {
-    stopTagsList.innerHTML = '';
-    stopSequences.forEach((s, i) => {
-      const span = document.createElement('span');
-      span.className = 'stop-tag';
-      span.innerHTML = escapeHtml(s) + ' <button type="button" data-index="' + i + '" aria-label="Удалить">×</button>';
-      stopTagsList.appendChild(span);
-    });
-    stopTagsHint.textContent = stopSequences.length >= MAX_STOP_SEQUENCES ? 'Достигнут лимит (4)' : 'Максимум 4 последовательности';
-  }
-
-  function addStopSequence(val) {
-    const v = (val || '').trim();
-    if (!v || stopSequences.length >= MAX_STOP_SEQUENCES) return;
-    if (stopSequences.includes(v)) return;
-    stopSequences.push(v);
-    renderStopTags();
-    stopTagInput.value = '';
-    saveSettings();
-  }
-
-  stopTagInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addStopSequence(e.key === ',' ? stopTagInput.value.replace(/,+\s*$/, '') : stopTagInput.value);
-    }
-  });
-  stopTagInput.addEventListener('blur', () => {
-    if (stopTagInput.value.trim()) addStopSequence(stopTagInput.value);
-  });
-  stopTagsList.addEventListener('click', (e) => {
-    const idx = e.target.getAttribute('data-index');
-    if (idx != null) {
-      stopSequences.splice(parseInt(idx, 10), 1);
-      renderStopTags();
-      saveSettings();
-    }
-  });
-
-  const maxOutputTokensEl = document.getElementById('max_output_tokens');
-  maxOutputTokensEl.addEventListener('change', saveSettings);
-
-  const configPanel = document.getElementById('configPanel');
-  const configToggle = document.getElementById('configToggle');
-  const configChevron = document.getElementById('configChevron');
-  const configPanelBody = document.getElementById('configPanelBody');
-  configToggle.addEventListener('click', () => {
-    const collapsed = configPanel.classList.toggle('collapsed');
-    configToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    configChevron.textContent = collapsed ? '▶' : '▼';
-    try { localStorage.setItem(STORAGE_KEYS.configCollapsed, collapsed ? '1' : '0'); } catch (_) {}
-  });
-  const savedCollapsed = localStorage.getItem(STORAGE_KEYS.configCollapsed);
-  if (savedCollapsed === '1') {
-    configPanel.classList.add('collapsed');
-    configToggle.setAttribute('aria-expanded', 'false');
-    configChevron.textContent = '▶';
-  }
-
   const userMessageEl = document.getElementById('user_message');
   const tokenCountEl = document.getElementById('token_count');
   let tokenDebounce;
@@ -558,13 +577,7 @@
 
   function saveSettings() {
     try {
-      const payload = {
-        user_message: userMessageEl.value,
-        system_prompt: document.getElementById('system_prompt').value,
-        stop_sequences: stopSequences,
-        max_output_tokens: maxOutputTokensEl.value ? parseInt(maxOutputTokensEl.value, 10) : null,
-        model: document.getElementById('model').value,
-      };
+      const payload = { user_message: userMessageEl.value };
       localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(payload));
     } catch (_) {}
   }
@@ -574,33 +587,227 @@
       if (!raw) return;
       const payload = JSON.parse(raw);
       if (payload.user_message != null) userMessageEl.value = payload.user_message;
-      if (payload.system_prompt != null) document.getElementById('system_prompt').value = payload.system_prompt;
-      if (Array.isArray(payload.stop_sequences)) {
-        stopSequences = payload.stop_sequences.slice(0, MAX_STOP_SEQUENCES);
-        renderStopTags();
-      }
-      if (payload.max_output_tokens != null && payload.max_output_tokens !== '') {
-        const v = Math.min(4096, Math.max(1, parseInt(payload.max_output_tokens, 10)));
-        if (!isNaN(v)) maxOutputTokensEl.value = String(v);
-      }
-      if (payload.model != null && document.getElementById('model').querySelector('option[value="' + escapeHtml(payload.model) + '"]')) {
-        document.getElementById('model').value = payload.model;
-      }
       tokenCountEl.textContent = '~' + approxTokens(userMessageEl.value) + ' токенов';
     } catch (_) {}
   }
+
+  function samplingParamRow(field, label, enabled, value, min, max, step, placeholder, chatId) {
+    const val = (enabled && value != null && String(value).trim() !== '') ? escapeHtml(String(value)) : '';
+    const dis = enabled ? '' : ' disabled';
+    const minAttr = min !== '' ? ' min="' + escapeHtml(min) + '"' : '';
+    const maxAttr = max !== '' ? ' max="' + escapeHtml(max) + '"' : '';
+    const stepAttr = step !== '' ? ' step="' + escapeHtml(step) + '"' : '';
+    return '<div class="config-item"><div class="param-checkbox"><input type="checkbox" data-field="' + field + '_enabled" id="' + field + '_' + escapeHtml(chatId) + '"' + (enabled ? ' checked' : '') + ' aria-label="Включить ' + escapeHtml(label) + '" /><label for="' + field + '_' + escapeHtml(chatId) + '">' + escapeHtml(label) + '</label></div><input type="number" data-field="' + field + '"' + minAttr + maxAttr + stepAttr + ' placeholder="' + escapeHtml(placeholder) + '" value="' + val + '"' + dis + ' /></div>';
+  }
+
+  function buildConfigBody(chat, chatId) {
+    const c = chat.config;
+    const modelOptions = CHAT_MODELS.map(m => '<option value="' + escapeHtml(m) + '"' + (c.model === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('');
+    const stopTagsHtml = (c.stop_sequences || []).slice(0, MAX_STOP_SEQUENCES).map((s, i) =>
+      '<span class="stop-tag">' + escapeHtml(s) + ' <button type="button" data-index="' + i + '" aria-label="Удалить">×</button></span>'
+    ).join('');
+    return '<div class="config-grid">' +
+      '<div class="config-item"><label for="sp_' + escapeHtml(chatId) + '">System Prompt</label><textarea id="sp_' + escapeHtml(chatId) + '" data-field="system_prompt" placeholder="Инструкции для модели (опционально)" rows="3">' + escapeHtml(c.system_prompt || '') + '</textarea></div>' +
+      '<div class="config-item"><label>Stop Sequences (до 4)</label><div class="stop-tags-wrap" data-field="stop-wrap"><div class="stop-tags-list" style="display:contents">' + stopTagsHtml + '</div><input type="text" class="stop-tags-input" data-field="stop-input" placeholder="Добавить..." aria-label="Добавить stop sequence" /></div><div class="stop-tags-hint">Максимум 4 последовательности</div></div>' +
+      '<div class="config-item"><label for="max_' + escapeHtml(chatId) + '">Max output tokens</label><input type="number" id="max_' + escapeHtml(chatId) + '" data-field="max_output_tokens" min="1" max="4096" placeholder="512" value="' + (c.max_output_tokens != null && c.max_output_tokens !== '' ? escapeHtml(String(c.max_output_tokens)) : '') + '" /></div>' +
+      '<div class="config-section"><div class="config-section-title">Сэмплирование</div><p class="param-hint param-hint-block sampling-unavailable-hint" data-field="sampling-hint" style="display:none;">Для выбранной модели недоступно.</p><div class="config-grid sampling-fields">' +
+      samplingParamRow('temperature', 'Temperature', c.temperature_enabled, c.temperature, '0', '2', '0.1', '0.7', chatId) +
+      samplingParamRow('top_p', 'Top P', c.top_p_enabled, c.top_p, '0', '1', '0.01', '1', chatId) +
+      samplingParamRow('frequency_penalty', 'Frequency penalty', c.frequency_penalty_enabled, c.frequency_penalty, '-2', '2', '0.1', '0', chatId) +
+      samplingParamRow('presence_penalty', 'Presence penalty', c.presence_penalty_enabled, c.presence_penalty, '-2', '2', '0.1', '0', chatId) +
+      samplingParamRow('seed', 'Seed', c.seed_enabled, c.seed, '', '', '', 'опционально', chatId) +
+      '</div></div><div class="config-item"><label for="model_' + escapeHtml(chatId) + '">Модель</label><select id="model_' + escapeHtml(chatId) + '" data-field="model">' + modelOptions + '</select></div></div>';
+  }
+
+  function updateSamplingAvailabilityInCard(card) {
+    const model = (card.querySelector('[data-field="model"]') || {}).value;
+    const unavailable = MODELS_WITHOUT_SAMPLING.has(model);
+    ['temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'seed'].forEach(f => {
+      const check = card.querySelector('[data-field="' + f + '_enabled"]');
+      const el = card.querySelector('[data-field="' + f + '"]');
+      if (check) check.disabled = unavailable;
+      if (el) el.disabled = unavailable || !(check && check.checked);
+    });
+    const hint = card.querySelector('[data-field="sampling-hint"]');
+    if (hint) hint.style.display = unavailable ? 'block' : 'none';
+  }
+
+  function bindCardToChat(card, chat, index) {
+    const chatId = chat.id;
+    const samplingFields = ['temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'seed'];
+    const updateConfig = () => {
+      const cfg = chat.config;
+      const sp = card.querySelector('[data-field="system_prompt"]');
+      if (sp) cfg.system_prompt = sp.value || '';
+      const maxEl = card.querySelector('[data-field="max_output_tokens"]');
+      if (maxEl) { const v = maxEl.value.trim(); cfg.max_output_tokens = v ? parseInt(v, 10) : null; }
+      cfg.model = (card.querySelector('[data-field="model"]') || {}).value || null;
+      samplingFields.forEach(f => {
+        const check = card.querySelector('[data-field="' + f + '_enabled"]');
+        const el = card.querySelector('[data-field="' + f + '"]');
+        const enabled = check && check.checked;
+        cfg[f + '_enabled'] = !!enabled;
+        cfg[f] = enabled && el ? (el.value.trim() || null) : null;
+      });
+      updateSamplingAvailabilityInCard(card);
+    };
+    function toggleSamplingInput(field) {
+      const check = card.querySelector('[data-field="' + field + '_enabled"]');
+      const el = card.querySelector('[data-field="' + field + '"]');
+      if (!el || !check) return;
+      if (check.checked) {
+        el.disabled = false;
+      } else {
+        el.disabled = true;
+        el.value = '';
+      }
+      updateConfig();
+    }
+    card.querySelectorAll('[data-field="system_prompt"], [data-field="max_output_tokens"], [data-field="model"]').forEach(el => {
+      el.addEventListener('change', updateConfig);
+      el.addEventListener('input', updateConfig);
+    });
+    samplingFields.forEach(f => {
+      const check = card.querySelector('[data-field="' + f + '_enabled"]');
+      const el = card.querySelector('[data-field="' + f + '"]');
+      if (check) { check.addEventListener('change', () => toggleSamplingInput(f)); }
+      if (el) { el.addEventListener('change', updateConfig); el.addEventListener('input', updateConfig); }
+    });
+    const modelSelect = card.querySelector('[data-field="model"]');
+    if (modelSelect) modelSelect.addEventListener('change', () => { updateConfig(); updateSamplingAvailabilityInCard(card); });
+    const stopWrap = card.querySelector('[data-field="stop-wrap"]');
+    const stopList = stopWrap && stopWrap.querySelector('.stop-tags-list');
+    const stopInput = stopWrap && stopWrap.querySelector('[data-field="stop-input"]');
+    function renderStopTags() {
+      if (!stopList) return;
+      stopList.innerHTML = (chat.config.stop_sequences || []).slice(0, MAX_STOP_SEQUENCES).map((s, i) =>
+        '<span class="stop-tag">' + escapeHtml(s) + ' <button type="button" data-index="' + i + '" aria-label="Удалить">×</button></span>'
+      ).join('');
+    }
+    function addStop(val) {
+      const v = (val || '').trim();
+      if (!v || (chat.config.stop_sequences || []).length >= MAX_STOP_SEQUENCES) return;
+      if (!chat.config.stop_sequences) chat.config.stop_sequences = [];
+      if (chat.config.stop_sequences.includes(v)) return;
+      chat.config.stop_sequences.push(v);
+      renderStopTags();
+      if (stopInput) stopInput.value = '';
+    }
+    if (stopInput) {
+      stopInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addStop(e.key === ',' ? stopInput.value.replace(/,+\s*$/, '') : stopInput.value); }
+      });
+      stopInput.addEventListener('blur', () => { if (stopInput.value.trim()) addStop(stopInput.value); });
+    }
+    if (stopWrap) stopWrap.addEventListener('click', (e) => {
+      const idx = e.target.getAttribute('data-index');
+      if (idx != null && chat.config.stop_sequences) {
+        chat.config.stop_sequences.splice(parseInt(idx, 10), 1);
+        renderStopTags();
+      }
+    });
+    const nameInput = card.querySelector('[data-field="chat_name"]');
+    if (nameInput) {
+      nameInput.addEventListener('input', () => {
+        chat.name = nameInput.value.trim() || null;
+        const block = card.closest('.chat-block');
+        const titleEl = block && block.querySelector('.column-title');
+        if (titleEl) titleEl.textContent = getChatLabel(chat, index);
+        const tabEl = document.getElementById('tab-' + chat.id);
+        if (tabEl) tabEl.textContent = getChatLabel(chat, index);
+      });
+      nameInput.addEventListener('change', () => {
+        chat.name = nameInput.value.trim() || null;
+        const block = card.closest('.chat-block');
+        const titleEl = block && block.querySelector('.column-title');
+        if (titleEl) titleEl.textContent = getChatLabel(chat, index);
+        const tabEl = document.getElementById('tab-' + chat.id);
+        if (tabEl) tabEl.textContent = getChatLabel(chat, index);
+      });
+    }
+    updateSamplingAvailabilityInCard(card);
+  }
+
+  function renderChatBlocks() {
+    scrollContainer.innerHTML = '';
+    chats.forEach((chat, index) => {
+      const block = document.createElement('div');
+      block.className = 'chat-block';
+      block.setAttribute('data-chat-index', String(index));
+      block.setAttribute('data-chat-id', chat.id);
+
+      const card = document.createElement('div');
+      card.className = 'chat-card';
+      const defaultLabel = 'Чат ' + (index + 1);
+      const canDelete = chats.length > 1;
+      card.innerHTML = '<div class="chat-card-header"><input type="text" class="chat-name-input" data-field="chat_name" placeholder="' + escapeHtml(defaultLabel) + '" value="' + escapeHtml(chat.name || '') + '" aria-label="Название чата" /><div class="chat-card-header-actions">' +
+        (canDelete ? '<button type="button" class="btn btn-secondary btn-remove-chat" aria-label="Удалить чат">Удалить</button>' : '') +
+        '</div></div><div class="config-panel collapsed"><button type="button" class="config-panel-header" aria-expanded="false" aria-controls="config-body-' + escapeHtml(chat.id) + '">Настройки <span aria-hidden="true" class="config-chevron">▶</span></button><div class="config-panel-body" id="config-body-' + escapeHtml(chat.id) + '">' + buildConfigBody(chat, chat.id) + '</div></div>';
+
+      const col = document.createElement('div');
+      col.className = 'column' + (index === 0 ? ' active' : '');
+      col.setAttribute('data-column', chat.id);
+      col.setAttribute('data-chat-index', String(index));
+      col.setAttribute('role', 'tabpanel');
+      col.setAttribute('aria-labelledby', 'tab-' + chat.id);
+      col.id = 'panel-' + chat.id;
+      col.innerHTML = '<div class="column-header"><span class="column-title">' + escapeHtml(getChatLabel(chat, index)) + '</span> <button type="button" class="btn btn-secondary btn-icon copy-btn" data-chat-index="' + index + '" aria-label="Копировать ответ">Копировать</button></div>' +
+        '<div class="column-body"><div class="empty-state column-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg><p>Ответ появится здесь</p></div><div class="column-content" style="display:none;"></div></div>' +
+        '<div class="column-metrics" style="display:none;"></div>';
+
+      const toggle = card.querySelector('.config-panel-header');
+      const chevron = card.querySelector('.config-chevron');
+      const panel = card.querySelector('.config-panel');
+      toggle.addEventListener('click', () => {
+        const collapsed = panel.classList.toggle('collapsed');
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        if (chevron) chevron.textContent = collapsed ? '▶' : '▼';
+      });
+      card.querySelector('.btn-remove-chat') && card.querySelector('.btn-remove-chat').addEventListener('click', () => {
+        if (chats.length <= 1) return;
+        chats.splice(index, 1);
+        lastResults.splice(index, 1);
+        renderChatBlocks();
+        renderTabsMobile();
+        updateDiffToolbarVisibility();
+      });
+      bindCardToChat(card, chat, index);
+
+      col.querySelector('.copy-btn').addEventListener('click', () => {
+        const text = lastResults[index] && lastResults[index].text;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => toast('Скопировано'), () => toast('Не удалось скопировать', true));
+      });
+
+      block.appendChild(card);
+      block.appendChild(col);
+      scrollContainer.appendChild(block);
+    });
+
+    chats.forEach((chat, index) => {
+      const col = getColumnEl(index);
+      if (col) renderDialogColumn(index, chat.messages, lastResults[index] || null);
+    });
+  }
+
+  addChatBtn.addEventListener('click', () => {
+    if (chats.length >= MAX_RUNS) { toast('Максимум ' + MAX_RUNS + ' чатов', true); return; }
+    chats.push({ id: 'chat_' + (nextChatId++), name: null, config: getDefaultConfig(), messages: [] });
+    renderChatBlocks();
+    renderTabsMobile();
+    updateDiffToolbarVisibility();
+  });
+
   loadSettings();
 
+  let lastResults = []; // per-chat last response { text, usage, finish_reason } for diff/copy
+
   function clearDialog() {
-    baselineMessages = [];
-    withConfigMessages = [];
-    lastBaseline = null;
-    lastWithConfig = null;
+    chats.forEach(c => { c.messages = []; });
+    lastResults = [];
     document.getElementById('diffToolbar').style.display = 'none';
     updateDiffVisibility(false);
-    document.querySelectorAll('.column-body .error-inline').forEach(el => el.remove());
-    renderDialogColumn('baseline', [], null);
-    renderDialogColumn('with-config', [], null);
+    renderChatBlocks();
   }
   document.getElementById('newDialogBtn').addEventListener('click', clearDialog);
 
@@ -616,32 +823,67 @@
     document.documentElement.classList.add('theme-light');
   }
 
-  function getMaxOutputTokens() {
-    const v = maxOutputTokensEl.value.trim();
-    if (!v) return null;
-    const n = parseInt(v, 10);
-    if (isNaN(n) || n < 1) return null;
-    return Math.min(4096, n);
-  }
-  function getPayload() {
-    return {
-      user_message: userMessageEl.value.trim(),
-      system_prompt: document.getElementById('system_prompt').value.trim() || null,
-      stop_sequences: stopSequences.slice(),
-      max_output_tokens: getMaxOutputTokens(),
-      model: document.getElementById('model').value.trim(),
+  function getRunConfig(chat) {
+    const c = chat.config;
+    function parseFloat_(val, lo, hi) {
+      if (val == null || String(val).trim() === '') return null;
+      const n = parseFloat(val);
+      if (isNaN(n)) return null;
+      return Math.max(lo, Math.min(hi, n));
+    }
+    const out = {
+      system_prompt: (c.system_prompt || '').trim() || null,
+      stop_sequences: (c.stop_sequences || []).slice(0, MAX_STOP_SEQUENCES),
+      max_output_tokens: c.max_output_tokens != null && c.max_output_tokens >= 1 ? Math.min(4096, c.max_output_tokens) : null,
+      model: (c.model || '').trim() || DEFAULT_CHAT_MODEL,
     };
+    if (c.temperature_enabled) { const v = parseFloat_(c.temperature, 0, 2); if (v != null) out.temperature = v; }
+    if (c.top_p_enabled) { const v = parseFloat_(c.top_p, 0, 1); if (v != null) out.top_p = v; }
+    if (c.frequency_penalty_enabled) { const v = parseFloat_(c.frequency_penalty, -2, 2); if (v != null) out.frequency_penalty = v; }
+    if (c.presence_penalty_enabled) { const v = parseFloat_(c.presence_penalty, -2, 2); if (v != null) out.presence_penalty = v; }
+    if (c.seed_enabled) { const v = c.seed; if (v != null && String(v).trim() !== '') { const n = parseInt(v, 10); if (!isNaN(n)) out.seed = n; } }
+    return out;
   }
 
-  function showSkeleton(id) {
-    const body = document.getElementById('body' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
-    const empty = document.getElementById('empty' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
-    const content = document.getElementById('content' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
-    const metrics = document.getElementById('metrics' + (id === 'baseline' ? 'Baseline' : 'WithConfig'));
-    empty.style.display = 'none';
-    content.style.display = 'block';
-    content.innerHTML = '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div>';
-    metrics.style.display = 'none';
+  function renderTabsMobile() {
+    const container = document.getElementById('tabsMobile');
+    container.innerHTML = '';
+    if (chats.length === 0) return;
+    chats.forEach((chat, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'tab-' + chat.id;
+      btn.className = 'btn btn-secondary tabs-mobile-btn' + (i === 0 ? ' active' : '');
+      btn.setAttribute('data-tab', chat.id);
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+      btn.setAttribute('aria-controls', 'panel-' + chat.id);
+      btn.textContent = getChatLabel(chat, i);
+      container.appendChild(btn);
+    });
+    container.querySelectorAll('.tabs-mobile-btn').forEach((tab, i) => {
+      tab.addEventListener('click', () => {
+        container.querySelectorAll('.tabs-mobile-btn').forEach((t, j) => { t.classList.toggle('active', j === i); t.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
+        scrollContainer.querySelectorAll('.chat-block .column').forEach((col, j) => { col.classList.toggle('active', j === i); });
+      });
+    });
+  }
+
+  function updateDiffToolbarVisibility() {
+    const diffToolbar = document.getElementById('diffToolbar');
+    diffToolbar.style.display = chats.length === 2 ? 'flex' : 'none';
+    if (chats.length !== 2) updateDiffVisibility(false);
+  }
+
+  function showSkeleton(index) {
+    const col = getColumnEl(index);
+    if (!col) return;
+    const empty = col.querySelector('.column-empty');
+    const content = col.querySelector('.column-content');
+    const metrics = col.querySelector('.column-metrics');
+    if (empty) empty.style.display = 'none';
+    if (content) { content.style.display = 'block'; content.innerHTML = '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div>'; }
+    if (metrics) metrics.style.display = 'none';
   }
 
   function highlightStopSequences(text, stops) {
@@ -691,31 +933,27 @@
     requestAnimationFrame(tick);
   }
 
-  function renderDialogColumn(columnId, messages, options) {
-    const isBaseline = columnId === 'baseline';
-    const bodyId = isBaseline ? 'bodyBaseline' : 'bodyWithConfig';
-    const contentId = isBaseline ? 'contentBaseline' : 'contentWithConfig';
-    const metricsId = isBaseline ? 'metricsBaseline' : 'metricsWithConfig';
-    const emptyId = isBaseline ? 'emptyBaseline' : 'emptyWithConfig';
-    const body = document.getElementById(bodyId);
-    const content = document.getElementById(contentId);
-    const metricsEl = document.getElementById(metricsId);
-    const empty = document.getElementById(emptyId);
+  function renderDialogColumn(index, messages, lastResult) {
+    const col = getColumnEl(index);
+    if (!col) return;
+    const empty = col.querySelector('.column-empty');
+    const content = col.querySelector('.column-content');
+    const metricsEl = col.querySelector('.column-metrics');
 
     if (!messages || messages.length === 0) {
-      empty.style.display = 'block';
-      content.style.display = 'none';
-      content.innerHTML = '';
-      metricsEl.style.display = 'none';
+      if (empty) empty.style.display = 'block';
+      if (content) { content.style.display = 'none'; content.innerHTML = ''; }
+      if (metricsEl) metricsEl.style.display = 'none';
       return;
     }
-    empty.style.display = 'none';
-    content.style.display = 'block';
-    metricsEl.style.display = 'none';
+    if (empty) empty.style.display = 'none';
+    if (content) content.style.display = 'block';
+    if (metricsEl) metricsEl.style.display = 'none';
 
     const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant';
-    const lastAssistantData = lastIsAssistant && options ? options : null;
-    const stopForHighlight = !isBaseline && lastAssistantData && lastAssistantData.stopSequences && lastAssistantData.stopSequences.length ? lastAssistantData.stopSequences : null;
+    const lastAssistantData = lastIsAssistant && lastResult ? lastResult : null;
+    const chat = chats[index];
+    const stopForHighlight = chat && chat.config && chat.config.stop_sequences && chat.config.stop_sequences.length ? chat.config.stop_sequences : null;
 
     const wrap = document.createElement('div');
     wrap.className = 'dialog-messages';
@@ -733,10 +971,7 @@
             if (lastAssistantData.responseTimeMs != null) html += '<dt>Время</dt><dd>' + lastAssistantData.responseTimeMs + ' ms</dd>';
             if (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) html += '<dt>Токены в ответе</dt><dd>' + lastAssistantData.usage.completion_tokens + '</dd>';
             if (lastAssistantData.finish_reason) html += '<dt>Причина остановки</dt><dd>' + escapeHtml(lastAssistantData.finish_reason) + '</dd>';
-            if (html) {
-              metricsEl.innerHTML = '<dl>' + html + '</dl>';
-              metricsEl.style.display = 'block';
-            }
+            if (html && metricsEl) { metricsEl.innerHTML = '<dl>' + html + '</dl>'; metricsEl.style.display = 'block'; }
           }
         });
       } else {
@@ -749,22 +984,22 @@
     content.appendChild(wrap);
   }
 
-  function renderResult(columnId, data, responseTimeMs, stopSeqsForConfig) {
-    const isBaseline = columnId === 'baseline';
-    const contentId = isBaseline ? 'contentBaseline' : 'contentWithConfig';
-    const metricsId = isBaseline ? 'metricsBaseline' : 'metricsWithConfig';
-    const emptyId = isBaseline ? 'emptyBaseline' : 'emptyWithConfig';
-    document.getElementById(emptyId).style.display = 'none';
-    document.getElementById(contentId).style.display = 'block';
+  function renderResultColumn(index, data, responseTimeMs, stopSeqs) {
+    const col = getColumnEl(index);
+    if (!col) return;
+    const content = col.querySelector('.column-content');
+    const empty = col.querySelector('.column-empty');
+    const metricsEl = col.querySelector('.column-metrics');
+    if (empty) empty.style.display = 'none';
+    if (content) content.style.display = 'block';
     if (data.error) {
-      document.getElementById(contentId).innerHTML = '<div class="error-inline">' + escapeHtml(data.error) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
-      document.getElementById(metricsId).style.display = 'none';
-      document.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+      content.innerHTML = '<div class="error-inline">' + escapeHtml(data.error) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
+      if (metricsEl) metricsEl.style.display = 'none';
+      col.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
       return;
     }
-    const messages = isBaseline ? baselineMessages : withConfigMessages;
-    const opts = { text: data.text, stopSequences: !isBaseline ? stopSeqsForConfig : null, responseTimeMs, usage: data.usage, finish_reason: data.finish_reason };
-    renderDialogColumn(columnId, messages, opts);
+    const opts = { text: data.text, stopSequences: stopSeqs || null, responseTimeMs, usage: data.usage, finish_reason: data.finish_reason };
+    renderDialogColumn(index, chats[index].messages, opts);
   }
 
   function simpleLineDiff(a, b) {
@@ -822,12 +1057,7 @@
     return { left, right };
   }
 
-  let lastBaseline = null;
-  let lastWithConfig = null;
-  let lastPayload = null;
   let diffMode = 'unified';
-  let baselineMessages = [];
-  let withConfigMessages = [];
 
   const diffToolbar = document.getElementById('diffToolbar');
   const showDiffBtn = document.getElementById('showDiffBtn');
@@ -835,16 +1065,15 @@
   const diffModeSwitch = document.getElementById('diffModeSwitch');
   const diffView = document.getElementById('diffView');
   const diffContent = document.getElementById('diffContent');
-  const resultsColumns = document.getElementById('resultsColumns');
 
   function updateDiffVisibility(show) {
-    resultsColumns.style.display = show ? 'none' : 'grid';
+    scrollContainer.style.display = show ? 'none' : 'flex';
     diffView.style.display = show ? 'block' : 'none';
     showDiffBtn.style.display = show ? 'none' : 'inline-block';
     hideDiffBtn.style.display = show ? 'inline-block' : 'none';
     diffModeSwitch.style.display = show ? 'flex' : 'none';
-    if (show && lastBaseline != null && lastWithConfig != null) {
-      const diff = simpleLineDiff(lastBaseline.text || '', lastWithConfig.text || '');
+    if (show && chats.length >= 2 && lastResults[0] != null && lastResults[1] != null) {
+      const diff = simpleLineDiff(lastResults[0].text || '', lastResults[1].text || '');
       if (diffMode === 'unified') {
         diffContent.innerHTML = '<div class="diff-unified">' + renderDiffUnified(diff) + '</div>';
       } else {
@@ -863,35 +1092,13 @@
     });
   });
 
-  document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const which = btn.getAttribute('data-copy');
-      const text = which === 'baseline' ? (lastBaseline && lastBaseline.text) : (lastWithConfig && lastWithConfig.text);
-      if (!text) return;
-      navigator.clipboard.writeText(text).then(() => toast('Скопировано'), () => toast('Не удалось скопировать', true));
-    });
-  });
-
-  const tabsMobile = document.querySelectorAll('.tabs-mobile-btn');
-  const columns = document.querySelectorAll('.results-columns .column');
-  tabsMobile.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabName = tab.getAttribute('data-tab');
-      tabsMobile.forEach(t => { t.classList.toggle('active', t === tab); t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
-      columns.forEach(col => { col.classList.toggle('active', col.getAttribute('data-column') === tabName); });
-    });
-  });
-
-  function addToHistory(payload) {
+  function addToHistory(user_message, runsConfigs) {
     try {
       let list = [];
       try { list = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || '[]'); } catch (_) {}
       list.unshift({
-        user_message: payload.user_message,
-        system_prompt: payload.system_prompt,
-        stop_sequences: payload.stop_sequences,
-        max_output_tokens: payload.max_output_tokens,
-        model: payload.model,
+        user_message: user_message,
+        runs: runsConfigs,
         ts: Date.now(),
       });
       list = list.slice(0, MAX_HISTORY);
@@ -909,7 +1116,7 @@
       return;
     }
     container.innerHTML = '';
-    list.forEach((item, i) => {
+    list.forEach((item) => {
       const div = document.createElement('div');
       div.className = 'history-item';
       div.tabIndex = 0;
@@ -922,16 +1129,36 @@
   }
 
   function restoreHistory(item) {
-    clearDialog();
-    userMessageEl.value = item.user_message || '';
-    document.getElementById('system_prompt').value = item.system_prompt || '';
-    stopSequences = Array.isArray(item.stop_sequences) ? item.stop_sequences.slice(0, MAX_STOP_SEQUENCES) : [];
-    renderStopTags();
-    const maxV = item.max_output_tokens != null ? Math.min(4096, Math.max(1, parseInt(item.max_output_tokens, 10))) : '';
-    maxOutputTokensEl.value = maxV === '' ? '' : String(maxV);
-    const modelSelect = document.getElementById('model');
-    if (item.model && [].some.call(modelSelect.options, o => o.value === item.model)) modelSelect.value = item.model;
-    tokenCountEl.textContent = '~' + approxTokens(userMessageEl.value) + ' токенов';
+    const user_message = item.user_message || '';
+    userMessageEl.value = user_message;
+    tokenCountEl.textContent = '~' + approxTokens(user_message) + ' токенов';
+    if (item.runs && Array.isArray(item.runs) && item.runs.length > 0) {
+      chats = item.runs.map((runConfig, idx) => ({
+        id: 'chat_' + (nextChatId++),
+        name: runConfig.name != null ? runConfig.name : null,
+        config: Object.assign(getDefaultConfig(), runConfig.config || {}),
+        messages: user_message ? [{ role: 'user', content: user_message }] : [],
+      }));
+      nextChatId = chats.length;
+    } else {
+      // legacy: single config
+      chats = [{ id: 'chat_0', name: null, config: Object.assign(getDefaultConfig(), {
+        system_prompt: item.system_prompt,
+        stop_sequences: item.stop_sequences,
+        max_output_tokens: item.max_output_tokens,
+        model: item.model,
+        temperature: item.temperature,
+        top_p: item.top_p,
+        frequency_penalty: item.frequency_penalty,
+        presence_penalty: item.presence_penalty,
+        seed: item.seed,
+      }), messages: user_message ? [{ role: 'user', content: user_message }] : [] }];
+      nextChatId = 1;
+    }
+    lastResults = [];
+    renderChatBlocks();
+    renderTabsMobile();
+    updateDiffToolbarVisibility();
     closeDrawer();
     saveSettings();
   }
@@ -962,103 +1189,214 @@
     const user_message = userMessageEl.value.trim();
     if (!user_message) return;
 
-    baselineMessages.push({ role: 'user', content: user_message });
-    withConfigMessages.push({ role: 'user', content: user_message });
+    const continueDialog = document.getElementById('continueDialog').checked;
+    const runs = chats.map(chat => {
+      const messages = continueDialog ? chat.messages.slice() : [];
+      messages.push({ role: 'user', content: user_message });
+      return { messages, config: getRunConfig(chat) };
+    });
 
-    const payload = getPayload();
-    lastPayload = payload;
     setStatus('Загрузка…', 'loading');
     document.getElementById('submitBtn').disabled = true;
-    showSkeleton('baseline');
-    showSkeleton('with-config');
+    chats.forEach((_, i) => showSkeleton(i));
     document.getElementById('diffToolbar').style.display = 'none';
     updateDiffVisibility(false);
 
     const t0 = performance.now();
-    let data;
     try {
-      const res = await fetch('/api/compare', {
+      const res = await fetch('/api/compare-many', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_message: payload.user_message,
-          system_prompt: payload.system_prompt,
-          stop_sequences: payload.stop_sequences,
-          max_output_tokens: payload.max_output_tokens,
-          model: payload.model,
-          baseline_messages: baselineMessages,
-          with_config_messages: withConfigMessages,
-        }),
+        body: JSON.stringify({ user_message, runs }),
       });
       const elapsed = Math.round(performance.now() - t0);
-      data = await res.json();
+      const data = await res.json();
       if (!res.ok) {
-        baselineMessages.pop();
-        withConfigMessages.pop();
         setStatus('Ошибка: ' + (data.error || res.status), 'error');
         toast(data.error || 'Ошибка запроса', true);
-        document.getElementById('contentBaseline').innerHTML = '<div class="error-inline">' + escapeHtml(data.error || res.status) + '</div>';
-        document.getElementById('contentBaseline').style.display = 'block';
-        document.getElementById('emptyBaseline').style.display = 'none';
-        document.getElementById('emptyWithConfig').style.display = 'none';
-        document.getElementById('contentWithConfig').style.display = 'none';
+        const col = getColumnEl(0);
+        if (col) {
+          const content = col.querySelector('.column-content');
+          const empty = col.querySelector('.column-empty');
+          if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(data.error || res.status) + '</div>'; }
+          if (empty) empty.style.display = 'none';
+        }
         document.getElementById('submitBtn').disabled = false;
         return;
       }
 
-      const baselineErr = data.without_config.error;
-      const withConfigErr = data.with_config.error;
-      if (baselineErr || withConfigErr) {
-        baselineMessages.pop();
-        withConfigMessages.pop();
-        renderDialogColumn('baseline', baselineMessages, null);
-        renderDialogColumn('with-config', withConfigMessages, null);
-        if (baselineErr) {
-          const bodyBaseline = document.getElementById('bodyBaseline');
-          const errDiv = document.createElement('div');
-          errDiv.className = 'error-inline';
-          errDiv.innerHTML = escapeHtml(baselineErr) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button>';
-          errDiv.querySelector('.retry-btn').addEventListener('click', () => document.getElementById('form').requestSubmit());
-          bodyBaseline.appendChild(errDiv);
+      const results = data.results || [];
+      let hasError = false;
+      for (let i = 0; i < chats.length; i++) {
+        const r = results[i] || {};
+        if (r.error) {
+          hasError = true;
+          renderResultColumn(i, r, elapsed, null);
+          continue;
         }
-        if (withConfigErr) {
-          const bodyWithConfig = document.getElementById('bodyWithConfig');
-          const errDiv = document.createElement('div');
-          errDiv.className = 'error-inline';
-          errDiv.innerHTML = escapeHtml(withConfigErr) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button>';
-          errDiv.querySelector('.retry-btn').addEventListener('click', () => document.getElementById('form').requestSubmit());
-          bodyWithConfig.appendChild(errDiv);
+        if (continueDialog) {
+          chats[i].messages.push({ role: 'user', content: user_message });
+          chats[i].messages.push({ role: 'assistant', content: r.text || '' });
+        } else {
+          chats[i].messages = [{ role: 'user', content: user_message }, { role: 'assistant', content: r.text || '' }];
         }
-        setStatus('Частичная ошибка', 'error');
-        document.getElementById('submitBtn').disabled = false;
-        return;
+        lastResults[i] = { text: r.text, usage: r.usage, finish_reason: r.finish_reason };
+        const stopSeqs = (chats[i].config && chats[i].config.stop_sequences) ? chats[i].config.stop_sequences : null;
+        renderResultColumn(i, { text: r.text, usage: r.usage, finish_reason: r.finish_reason }, elapsed, stopSeqs);
       }
-
-      baselineMessages.push({ role: 'assistant', content: data.without_config.text || '' });
-      withConfigMessages.push({ role: 'assistant', content: data.with_config.text || '' });
-      lastBaseline = { text: data.without_config.text, error: null, usage: data.without_config.usage, finish_reason: data.without_config.finish_reason };
-      lastWithConfig = { text: data.with_config.text, error: null, usage: data.with_config.usage, finish_reason: data.with_config.finish_reason };
-
-      renderResult('baseline', data.without_config, elapsed, null);
-      renderResult('with-config', data.with_config, elapsed, payload.stop_sequences);
+      if (hasError) setStatus('Частичная ошибка', 'error');
+      else setStatus('Готово', '');
       userMessageEl.value = '';
       tokenCountEl.textContent = '~0 токенов';
-
-      setStatus('Готово', '');
-      diffToolbar.style.display = 'flex';
-      showDiffBtn.style.display = 'inline-block';
-      addToHistory({ ...payload, user_message });
+      addToHistory(user_message, chats.map(c => ({ config: c.config, name: c.name })));
+      updateDiffToolbarVisibility();
     } catch (err) {
-      baselineMessages.pop();
-      withConfigMessages.pop();
       setStatus('Ошибка', 'error');
       toast(String(err.message || err), true);
-      document.getElementById('contentBaseline').innerHTML = '<div class="error-inline">' + escapeHtml(String(err.message || err)) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
-      document.getElementById('contentBaseline').style.display = 'block';
-      document.getElementById('emptyBaseline').style.display = 'none';
-      document.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+      const col = getColumnEl(0);
+      if (col) {
+        const content = col.querySelector('.column-content');
+        const empty = col.querySelector('.column-empty');
+        if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(String(err.message || err)) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>'; }
+        if (empty) empty.style.display = 'none';
+        col.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+      }
     } finally {
       document.getElementById('submitBtn').disabled = false;
+    }
+  });
+
+  const evalSection = document.getElementById('evalSection');
+  const evalWinner = document.getElementById('evalWinner');
+  const evalRanking = document.getElementById('evalRanking');
+  const evalDetails = document.getElementById('evalDetails');
+  const evalBadges = document.getElementById('evalBadges');
+
+  const CRITERION_LABELS_RU = {
+    correctness: 'Правильность',
+    completeness: 'Полнота',
+    relevance: 'Релевантность',
+    clarity: 'Ясность',
+    actionability: 'Действенность',
+    constraint_following: 'Соблюдение ограничений',
+    uncertainty_handling: 'Работа с неопределённостью',
+    safety: 'Безопасность',
+    efficiency: 'Эффективность',
+  };
+  function criterionLabel(key) { return CRITERION_LABELS_RU[key] || key; }
+
+  function buildEvalRuns() {
+    const runs = [];
+    for (let i = 0; i < chats.length; i++) {
+      const text = lastResults[i] && lastResults[i].text != null ? lastResults[i].text : (chats[i].messages.length > 0 && chats[i].messages[chats[i].messages.length - 1].role === 'assistant' ? chats[i].messages[chats[i].messages.length - 1].content : '');
+      runs.push({
+        run_id: String(i),
+        answer_text: text || '',
+        latency_ms: lastResults[i] && lastResults[i].responseTimeMs != null ? lastResults[i].responseTimeMs : null,
+        tokens_out: lastResults[i] && lastResults[i].usage && lastResults[i].usage.completion_tokens != null ? lastResults[i].usage.completion_tokens : null,
+      });
+    }
+    return runs;
+  }
+
+  function renderEvalReport(report) {
+    if (!report) return;
+    evalSection.style.display = 'block';
+    const winnerId = report.winner_run_id;
+    const ranking = report.ranking || [];
+    const perRun = report.per_run || {};
+    const rankIndex = ranking.indexOf(winnerId);
+    const winnerIdx = parseInt(winnerId, 10);
+    const winnerLabel = rankIndex >= 0 && chats[winnerIdx] ? getChatLabel(chats[winnerIdx], winnerIdx) : winnerId;
+    evalWinner.textContent = 'Победитель: ' + winnerLabel + (perRun[winnerId] ? ' (' + Math.round(perRun[winnerId].overall_score) + ')' : '');
+    evalBadges.innerHTML = '';
+    const conf = document.createElement('span');
+    conf.className = 'eval-badge confidence';
+    conf.textContent = 'Уверенность: ' + Math.round((report.confidence || 0) * 100) + '%';
+    evalBadges.appendChild(conf);
+    if (report.is_fallback) {
+      const fb = document.createElement('span');
+      fb.className = 'eval-badge fallback';
+      fb.textContent = 'Эвристика';
+      evalBadges.appendChild(fb);
+    }
+    let tableHtml = '<table class="eval-table"><thead><tr><th>#</th><th>Чат</th><th class="eval-th-score">Балл</th></tr></thead><tbody>';
+    ranking.forEach((runId, i) => {
+      const pr = perRun[runId];
+      const score = pr ? Math.round(pr.overall_score) : '—';
+      const idx = parseInt(runId, 10);
+      const label = chats[idx] ? getChatLabel(chats[idx], idx) : runId;
+      tableHtml += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(label) + '</td><td class="eval-td-score">' + score + '</td></tr>';
+    });
+    tableHtml += '</tbody></table>';
+    evalRanking.innerHTML = '<h3 class="eval-subtitle">Ранжирование</h3>' + tableHtml;
+    let detailsHtml = '<h3 class="eval-subtitle">Подробности по ответам</h3>';
+    ranking.forEach((runId) => {
+      const pr = perRun[runId];
+      if (!pr) return;
+      const idx = parseInt(runId, 10);
+      const label = chats[idx] ? getChatLabel(chats[idx], idx) : runId;
+      const id = 'eval-run-' + runId;
+      let body = '';
+      if (Object.keys(pr.per_criterion_scores || {}).length) {
+        body += '<dl><dt>Критерии</dt><dd><ul class="eval-criteria-list">';
+        for (const [k, v] of Object.entries(pr.per_criterion_scores)) {
+          body += '<li>' + escapeHtml(criterionLabel(k)) + ': ' + v + '</li>';
+        }
+        body += '</ul></dd></dl>';
+      }
+      if ((pr.strengths || []).length) { body += '<dl><dt>Сильные стороны</dt><dd><ul class="eval-criteria-list">'; pr.strengths.forEach(s => { body += '<li>' + escapeHtml(s) + '</li>'; }); body += '</ul></dd></dl>'; }
+      if ((pr.weaknesses || []).length) { body += '<dl><dt>Слабости</dt><dd><ul class="eval-criteria-list">'; pr.weaknesses.forEach(w => { body += '<li>' + escapeHtml(w) + '</li>'; }); body += '</ul></dd></dl>'; }
+      if ((pr.fix_suggestions || []).length) { body += '<dl><dt>Рекомендации</dt><dd><ul class="eval-criteria-list">'; pr.fix_suggestions.forEach(f => { body += '<li>' + escapeHtml(f) + '</li>'; }); body += '</ul></dd></dl>'; }
+      detailsHtml += '<div class="eval-run-card"><button type="button" class="eval-run-header" aria-expanded="false" aria-controls="' + id + '" data-run-id="' + escapeHtml(runId) + '">' + escapeHtml(label) + ' — ' + Math.round(pr.overall_score) + ' <span aria-hidden="true">▼</span></button><div class="eval-run-body" id="' + id + '" style="display:none;">' + body + '</div></div>';
+    });
+    if (report.top2_comparison) {
+      const top2 = report.top2_comparison;
+      detailsHtml += '<h3 class="eval-subtitle eval-subtitle-top2">Сравнение топ-2</h3><div class="eval-top2-card"><div class="eval-run-body"><dl><dt>Почему победитель лучше</dt><dd>' + escapeHtml(top2.why_winner_better) + '</dd><dt>Где второй лучше</dt><dd>' + escapeHtml(top2.where_runner_up_better) + '</dd></dl></div></div>';
+    }
+    evalDetails.innerHTML = detailsHtml;
+    evalDetails.querySelectorAll('.eval-run-header').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const body = document.getElementById(btn.getAttribute('aria-controls'));
+        if (!body) return;
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+        const span = btn.querySelector('span');
+        if (span) span.textContent = open ? '▼' : '▲';
+      });
+    });
+  }
+
+  document.getElementById('evaluateBtn').addEventListener('click', async () => {
+    const runs = buildEvalRuns();
+    if (runs.length === 0 || runs.every(r => !(r.answer_text || '').trim())) {
+      toast('Сначала запустите сравнение и получите ответы', true);
+      return;
+    }
+    const user_message = userMessageEl.value.trim();
+    const preset = document.getElementById('evalPreset').value || 'general';
+    setStatus('Оценка…', 'loading');
+    document.getElementById('evaluateBtn').disabled = true;
+    try {
+      const res = await fetch('/api/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_message: user_message || 'No question', runs: runs, weights_preset: preset }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || 'Ошибка оценки', true);
+        setStatus('Ошибка', 'error');
+        return;
+      }
+      renderEvalReport(data);
+      setStatus('Готово', '');
+    } catch (err) {
+      toast(String(err.message || err), true);
+      setStatus('Ошибка', 'error');
+    } finally {
+      document.getElementById('evaluateBtn').disabled = false;
     }
   });
 
@@ -1075,6 +1413,9 @@
     }
   });
 
+  renderChatBlocks();
+  renderTabsMobile();
+  updateDiffToolbarVisibility();
   renderHistory();
 })();
   </script>
