@@ -16,11 +16,13 @@ pip install -r requirements.txt
 
 ## Run
 
-Ключ берётся из переменной окружения **или из файла `.env`** в корне проекта (через `python-dotenv`). Создайте `.env`:
+Ключи берутся из переменных окружения **или из файла `.env`** в корне проекта (через `python-dotenv`). Создайте `.env`:
 
 ```bash
-# В корне проекта создайте файл .env с одной строкой:
+# OpenAI (обязателен для CLI и для моделей OpenAI в веб-интерфейсе)
 echo "OPENAI_API_KEY=sk-ваш-ключ" > .env
+# DeepSeek (нужен только для моделей deepseek-chat / deepseek-reasoner в веб-интерфейсе)
+echo "DEEPSEEK_API_KEY=ваш-ключ" >> .env
 ```
 
 Либо задайте переменную вручную:
@@ -99,7 +101,7 @@ You: /exit
 **Возможности:**
 
 - **Несколько чатов** — по умолчанию один, можно добавлять и удалять. У каждого чата свой набор настроек и своя история диалога.
-- **Настройки на чат:** System prompt, Stop sequences (теги, до 4), Max output tokens, модель, опциональные параметры сэмплирования (temperature, top_p, frequency_penalty, presence_penalty, seed) с чекбоксом «Включить» — в API уходят только включённые и заполненные.
+- **Настройки на чат:** System prompt, Stop sequences (теги, до 4), Max output tokens, модель, опциональные параметры сэмплирования (temperature, top_p, frequency_penalty, presence_penalty, seed) с чекбоксом «Включить» — в API уходят только включённые и заполненные. Для части моделей (reasoning: o1, o1-mini, o3-mini, gpt-5.2-thinking, deepseek-reasoner) сэмплирование недоступно; см. [docs/temperature.md](docs/temperature.md).
 - **Имена чатов** — можно задать кастомное название (иначе «Чат 1», «Чат 2»).
 - **Продолжить диалог** — чекбокс под полем ввода: если выключен, запрос уходит без истории (один тур); если включен — с полной историей чата.
 - **Оценить** — модуль Evaluator (LLM-as-Judge): ранжирование ответов по критериям, баллы, сильные/слабые стороны, рекомендации, сравнение топ-2. Пресеты весов: Общий, Код, Факты, Текст. Вывод на русском.
@@ -122,7 +124,7 @@ flask --app web_app run --port 5001
 
 Откройте в браузере: **http://127.0.0.1:5000** (или 5001 при `--port 5001`).
 
-Введите сообщение, при необходимости настройте каждый чат в своей карточке и нажмите **Run**. Ответы появятся в колонках; затем можно нажать **Оценить** для ранжирования. Веб-интерфейс использует **Chat Completions API** и поддерживает множество моделей (gpt-4o, gpt-4o-mini, gpt-3.5-turbo, o1, o1-mini и др.). CLI-чат использует Responses API.
+Введите сообщение, при необходимости настройте каждый чат в своей карточке и нажмите **Run**. Ответы появятся в колонках; затем можно нажать **Оценить** для ранжирования. Веб-интерфейс использует **Chat Completions API** и поддерживает модели **OpenAI** (gpt-4o, gpt-4o-mini, o1, gpt-5.2 и др.) и **DeepSeek** (deepseek-chat, deepseek-reasoner). Для DeepSeek в `.env` должен быть задан `DEEPSEEK_API_KEY`. CLI-чат использует Responses API (только OpenAI).
 
 ## Project layout
 
@@ -132,5 +134,6 @@ flask --app web_app run --port 5001
 - `web_app.py` — Flask: маршруты `/`, `POST /api/compare`, `POST /api/compare-many`, `POST /api/evaluate`, `GET /api/evaluate/last`.
 - `templates/index.html` — Веб-форма: общее поле ввода, список чатов с настройками, колонки результатов, Evaluator, история, diff, тема.
 - `evaluator/` — Модуль оценки ответов: классификация вопроса, LLM-as-Judge, эвристический fallback, схемы (Pydantic), промпты, защита от prompt injection.
-- `tests/` — Тесты (в т.ч. `test_evaluator.py`: парсинг JSON, injection, fallback).
+- `tests/` — Тесты (в т.ч. `test_evaluator.py`: парсинг JSON, injection, fallback; `test_sampling_compatibility.py`: temperature/sampling по моделям).
+- `docs/temperature.md` — Поддержка temperature и сэмплирования по моделям/провайдерам, матрица совместимости.
 - `requirements.txt` — `openai`, `python-dotenv`, `flask`, `pydantic`, `pytest`.

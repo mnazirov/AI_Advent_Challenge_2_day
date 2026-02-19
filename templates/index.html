@@ -66,6 +66,7 @@
     .header-actions .eval-preset-select { height: 2.25rem; padding-top: 0; padding-bottom: 0; min-width: 6rem; }
     .status { font-size: 0.875rem; color: var(--text-muted); }
     .status.loading { color: var(--accent); }
+    .status-hint { font-size: 0.85rem; color: var(--text-muted, #666); margin-left: 0.5rem; }
     .status.error { color: var(--error); }
     .btn {
       padding: 0.5rem 1rem;
@@ -263,12 +264,18 @@
       min-height: 160px;
     }
     .column-body pre, .column-body .response-text {
-      white-space: pre-wrap;
       word-break: break-word;
       margin: 0;
       font-size: 0.875rem;
       line-height: 1.5;
     }
+    .column-body .response-text-plain { white-space: pre-wrap; }
+    .column-body .response-text-md { white-space: normal; }
+    .column-body .response-text-md p { margin: 0 0 0.5rem; }
+    .column-body .response-text-md p:last-child { margin-bottom: 0; }
+    .column-body .response-text-md pre.md-block { white-space: pre-wrap; background: var(--bg-elevated); padding: 0.5rem 0.75rem; border-radius: 4px; margin: 0.5rem 0; overflow-x: auto; }
+    .column-body .response-text-md code.md-inline { background: var(--bg-elevated); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.9em; }
+    .column-body .response-text-md a { color: var(--accent); text-decoration: underline; }
     .dialog-messages { display: flex; flex-direction: column; gap: 0.75rem; }
     .message { break-inside: avoid; }
     .message-label { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem; }
@@ -392,6 +399,14 @@
     .eval-badge.fallback { background: var(--baseline); color: var(--bg); }
     .eval-badge.confidence { background: var(--accent); color: #fff; }
 
+    /* API debug: request/response JSON */
+    .api-debug-section { margin-top: 1rem; }
+    .api-debug-section .btn { margin-bottom: 0.5rem; }
+    .api-debug-content { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); padding: 1rem; overflow: auto; }
+    .api-debug-heading { font-size: 0.875rem; font-weight: 600; margin: 0 0 0.35rem 0; color: var(--text-muted); }
+    .api-debug-content .api-debug-heading:not(:first-child) { margin-top: 1rem; }
+    .api-debug-pre { margin: 0; font-size: 0.75rem; line-height: 1.4; white-space: pre-wrap; word-break: break-all; color: var(--text); background: var(--bg-elevated); padding: 0.75rem; border-radius: 4px; max-height: 20rem; overflow: auto; }
+
     /* Utility */
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
   </style>
@@ -402,6 +417,7 @@
       <h1>Сравнение запросов: несколько чатов</h1>
       <div class="header-actions">
         <span id="status" class="status" aria-live="polite">Готов</span>
+        <span id="statusHint" class="status-hint" style="display:none;" aria-live="polite"></span>
         <button type="button" class="btn btn-secondary" id="historyBtn" aria-label="История запросов" title="История">История</button>
         <button type="button" class="btn btn-secondary" id="themeBtn" aria-label="Переключить тему">Тема</button>
         <button type="button" class="btn btn-secondary" id="newDialogBtn" aria-label="Новый диалог">Новый диалог</button>
@@ -447,6 +463,16 @@
         <div class="chats-and-results-scroll" id="chatsAndResultsScroll" aria-label="Чаты и результаты"></div>
         <button type="button" class="btn btn-secondary btn-add-chat" id="addChatBtn" aria-label="Добавить чат">Добавить чат</button>
       </form>
+
+      <div class="api-debug-section" id="apiDebugSection" style="display: none;">
+        <button type="button" class="btn btn-secondary" id="apiDebugToggle" aria-expanded="false" aria-controls="apiDebugContent">Запрос и ответ</button>
+        <div class="api-debug-content" id="apiDebugContent" style="display: none;">
+          <h4 class="api-debug-heading">Отправленный JSON</h4>
+          <pre id="apiDebugRequest" class="api-debug-pre"></pre>
+          <h4 class="api-debug-heading">Ответ</h4>
+          <pre id="apiDebugResponse" class="api-debug-pre"></pre>
+        </div>
+      </div>
 
       <div class="results-wrap" id="resultsView">
         <div class="diff-view" id="diffView" style="display: none;">
@@ -496,6 +522,7 @@
   const MAX_RUNS = 10;
   const MAX_STOP_SEQUENCES = 4;
   const TOKEN_DEBOUNCE_MS = 300;
+  const FETCH_TIMEOUT_MS = 180000; // 3 min; abort fetch after this, show timeout message
 
   function getDefaultConfig() {
     return {
@@ -535,6 +562,38 @@
     return div.innerHTML;
   }
 
+  /** Minimal markdown to HTML (safe: escapes then applies patterns). Supports **bold**, *italic*, `code`, ```blocks```, [links](url), paragraphs. */
+  function markdownToHtml(text) {
+    if (!text || typeof text !== 'string') return '';
+    const codeBlocks = [];
+    let t = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      const i = codeBlocks.length;
+      codeBlocks.push(escapeHtml(code).trim());
+      return '\n%%CB' + i + '%%\n';
+    });
+    t = escapeHtml(t).replace(/%%CB(\d+)%%/g, (_, i) => '<pre class="md-block"><code>' + codeBlocks[Number(i)] + '</code></pre>');
+    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/`([^`]+)`/g, '<code class="md-inline">$1</code>');
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label, href) => '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(label) + '</a>');
+    t = t.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+    return '<p>' + t + '</p>';
+  }
+
+  function renderMessageContent(text, stopSeqs) {
+    if (!text || typeof text !== 'string') return '';
+    if (!stopSeqs || !stopSeqs.length) return markdownToHtml(text);
+    const parts = [];
+    let pos = 0;
+    for (let i = 0; i < stopSeqs.length; i++) {
+      const idx = text.indexOf(stopSeqs[i], pos);
+      if (idx === -1) continue;
+      if (idx > pos) parts.push({ t: text.slice(pos, idx), stop: false });
+      parts.push({ t: stopSeqs[i], stop: true });
+      pos = idx + stopSeqs[i].length;
+    }
+    if (pos < text.length) parts.push({ t: text.slice(pos), stop: false });
+    return parts.map(p => p.stop ? '<mark class="stop-highlight">' + escapeHtml(p.t) + '</mark>' : markdownToHtml(p.t)).join('');
+  }
+
   function approxTokens(text) {
     if (!text || !text.trim()) return 0;
     return Math.ceil(text.trim().length / 4);
@@ -557,6 +616,16 @@
     const status = document.getElementById('status');
     status.textContent = text;
     status.className = 'status' + (className ? ' ' + className : '');
+    const hint = document.getElementById('statusHint');
+    if (hint) {
+      if (className === 'loading') {
+        hint.textContent = 'При нескольких чатах ответ может занять 1–2 минуты';
+        hint.style.display = '';
+      } else {
+        hint.style.display = 'none';
+        hint.textContent = '';
+      }
+    }
   }
 
   const userMessageEl = document.getElementById('user_message');
@@ -674,7 +743,20 @@
       if (el) { el.addEventListener('change', updateConfig); el.addEventListener('input', updateConfig); }
     });
     const modelSelect = card.querySelector('[data-field="model"]');
-    if (modelSelect) modelSelect.addEventListener('change', () => { updateConfig(); updateSamplingAvailabilityInCard(card); });
+    if (modelSelect) modelSelect.addEventListener('change', () => {
+      updateConfig();
+      if (MODELS_WITHOUT_SAMPLING.has(chat.config.model)) {
+        samplingFields.forEach(f => {
+          chat.config[f + '_enabled'] = false;
+          chat.config[f] = null;
+          const check = card.querySelector('[data-field="' + f + '_enabled"]');
+          const el = card.querySelector('[data-field="' + f + '"]');
+          if (check) check.checked = false;
+          if (el) el.value = '';
+        });
+      }
+      updateSamplingAvailabilityInCard(card);
+    });
     const stopWrap = card.querySelector('[data-field="stop-wrap"]');
     const stopList = stopWrap && stopWrap.querySelector('.stop-tags-list');
     const stopInput = stopWrap && stopWrap.querySelector('[data-field="stop-input"]');
@@ -837,11 +919,13 @@
       max_output_tokens: c.max_output_tokens != null && c.max_output_tokens >= 1 ? Math.min(4096, c.max_output_tokens) : null,
       model: (c.model || '').trim() || DEFAULT_CHAT_MODEL,
     };
-    if (c.temperature_enabled) { const v = parseFloat_(c.temperature, 0, 2); if (v != null) out.temperature = v; }
-    if (c.top_p_enabled) { const v = parseFloat_(c.top_p, 0, 1); if (v != null) out.top_p = v; }
-    if (c.frequency_penalty_enabled) { const v = parseFloat_(c.frequency_penalty, -2, 2); if (v != null) out.frequency_penalty = v; }
-    if (c.presence_penalty_enabled) { const v = parseFloat_(c.presence_penalty, -2, 2); if (v != null) out.presence_penalty = v; }
-    if (c.seed_enabled) { const v = c.seed; if (v != null && String(v).trim() !== '') { const n = parseInt(v, 10); if (!isNaN(n)) out.seed = n; } }
+    if (!MODELS_WITHOUT_SAMPLING.has(out.model)) {
+      if (c.temperature_enabled) { const v = parseFloat_(c.temperature, 0, 2); if (v != null) out.temperature = v; }
+      if (c.top_p_enabled) { const v = parseFloat_(c.top_p, 0, 1); if (v != null) out.top_p = v; }
+      if (c.frequency_penalty_enabled) { const v = parseFloat_(c.frequency_penalty, -2, 2); if (v != null) out.frequency_penalty = v; }
+      if (c.presence_penalty_enabled) { const v = parseFloat_(c.presence_penalty, -2, 2); if (v != null) out.presence_penalty = v; }
+      if (c.seed_enabled) { const v = c.seed; if (v != null && String(v).trim() !== '') { const n = parseInt(v, 10); if (!isNaN(n)) out.seed = n; } }
+    }
     return out;
   }
 
@@ -909,7 +993,7 @@
   function typewriter(el, text, stopSequencesForHighlight, done) {
     el.innerHTML = '';
     const container = document.createElement('pre');
-    container.className = 'response-text';
+    container.className = 'response-text response-text-plain';
     el.appendChild(container);
     if (!text) {
       container.textContent = '(пусто)';
@@ -920,8 +1004,10 @@
     let i = 0;
     function tick() {
       if (i >= text.length) {
-        const withStops = stopSequencesForHighlight && stopSequencesForHighlight.length;
-        container.innerHTML = withStops ? highlightStopSequences(text, stopSequencesForHighlight) : escapeHtml(text);
+        const mdContainer = document.createElement('div');
+        mdContainer.className = 'response-text response-text-md';
+        mdContainer.innerHTML = renderMessageContent(text, stopSequencesForHighlight || null);
+        container.replaceWith(mdContainer);
         if (done) done();
         return;
       }
@@ -976,7 +1062,7 @@
         });
       } else {
         const text = msg.content || '';
-        contentBlock.innerHTML = stopForHighlight && msg.role === 'assistant' && isLast ? highlightStopSequences(text, stopForHighlight) : escapeHtml(text);
+        contentBlock.innerHTML = renderMessageContent(text, stopForHighlight && msg.role === 'assistant' && isLast ? stopForHighlight : null);
       }
       wrap.appendChild(div);
     }
@@ -1184,6 +1270,27 @@
     if (e.key === 'Escape' && drawer.classList.contains('open')) { closeDrawer(); }
   });
 
+  function updateApiDebugContent(requestBody, responseObj) {
+    const section = document.getElementById('apiDebugSection');
+    const reqEl = document.getElementById('apiDebugRequest');
+    const respEl = document.getElementById('apiDebugResponse');
+    if (!section || !reqEl || !respEl) return;
+    reqEl.textContent = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody, null, 2);
+    try {
+      respEl.textContent = JSON.stringify(responseObj, null, 2);
+    } catch (_) {
+      respEl.textContent = String(responseObj);
+    }
+    section.style.display = 'block';
+  }
+  document.getElementById('apiDebugToggle').addEventListener('click', () => {
+    const content = document.getElementById('apiDebugContent');
+    const btn = document.getElementById('apiDebugToggle');
+    const open = content.style.display !== 'none';
+    content.style.display = open ? 'none' : 'block';
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  });
+
   document.getElementById('form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const user_message = userMessageEl.value.trim();
@@ -1195,6 +1302,8 @@
       messages.push({ role: 'user', content: user_message });
       return { messages, config: getRunConfig(chat) };
     });
+    const payload = { user_message, runs };
+    const bodyString = JSON.stringify(payload);
 
     setStatus('Загрузка…', 'loading');
     document.getElementById('submitBtn').disabled = true;
@@ -1202,24 +1311,39 @@
     document.getElementById('diffToolbar').style.display = 'none';
     updateDiffVisibility(false);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
     const t0 = performance.now();
     try {
       const res = await fetch('/api/compare-many', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_message, runs }),
+        body: bodyString,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       const elapsed = Math.round(performance.now() - t0);
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = { error: 'Response is not JSON', status: res.status };
+      }
+      updateApiDebugContent(bodyString, data);
+      const errMsg = data.error || String(res.status);
       if (!res.ok) {
-        setStatus('Ошибка: ' + (data.error || res.status), 'error');
-        toast(data.error || 'Ошибка запроса', true);
-        const col = getColumnEl(0);
-        if (col) {
-          const content = col.querySelector('.column-content');
-          const empty = col.querySelector('.column-empty');
-          if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(data.error || res.status) + '</div>'; }
-          if (empty) empty.style.display = 'none';
+        clearTimeout(timeoutId);
+        setStatus('Ошибка: ' + errMsg, 'error');
+        toast(errMsg || 'Ошибка запроса', true);
+        for (let i = 0; i < chats.length; i++) {
+          const col = getColumnEl(i);
+          if (col) {
+            const content = col.querySelector('.column-content');
+            const empty = col.querySelector('.column-empty');
+            if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(errMsg) + '</div>'; }
+            if (empty) empty.style.display = 'none';
+          }
         }
         document.getElementById('submitBtn').disabled = false;
         return;
@@ -1229,20 +1353,25 @@
       let hasError = false;
       for (let i = 0; i < chats.length; i++) {
         const r = results[i] || {};
-        if (r.error) {
+        try {
+          if (r.error) {
+            hasError = true;
+            renderResultColumn(i, r, elapsed, null);
+            continue;
+          }
+          if (continueDialog) {
+            chats[i].messages.push({ role: 'user', content: user_message });
+            chats[i].messages.push({ role: 'assistant', content: r.text || '' });
+          } else {
+            chats[i].messages = [{ role: 'user', content: user_message }, { role: 'assistant', content: r.text || '' }];
+          }
+          lastResults[i] = { text: r.text, usage: r.usage, finish_reason: r.finish_reason };
+          const stopSeqs = (chats[i].config && chats[i].config.stop_sequences) ? chats[i].config.stop_sequences : null;
+          renderResultColumn(i, { text: r.text, usage: r.usage, finish_reason: r.finish_reason }, elapsed, stopSeqs);
+        } catch (colErr) {
           hasError = true;
-          renderResultColumn(i, r, elapsed, null);
-          continue;
+          renderResultColumn(i, { error: String(colErr && (colErr.message || colErr)) || 'Ошибка отображения' }, elapsed, null);
         }
-        if (continueDialog) {
-          chats[i].messages.push({ role: 'user', content: user_message });
-          chats[i].messages.push({ role: 'assistant', content: r.text || '' });
-        } else {
-          chats[i].messages = [{ role: 'user', content: user_message }, { role: 'assistant', content: r.text || '' }];
-        }
-        lastResults[i] = { text: r.text, usage: r.usage, finish_reason: r.finish_reason };
-        const stopSeqs = (chats[i].config && chats[i].config.stop_sequences) ? chats[i].config.stop_sequences : null;
-        renderResultColumn(i, { text: r.text, usage: r.usage, finish_reason: r.finish_reason }, elapsed, stopSeqs);
       }
       if (hasError) setStatus('Частичная ошибка', 'error');
       else setStatus('Готово', '');
@@ -1251,15 +1380,21 @@
       addToHistory(user_message, chats.map(c => ({ config: c.config, name: c.name })));
       updateDiffToolbarVisibility();
     } catch (err) {
+      clearTimeout(timeoutId);
+      const isTimeout = err && (err.name === 'AbortError' || (controller.signal && controller.signal.aborted));
+      const errStr = isTimeout ? 'Запрос занял слишком много времени. Попробуйте меньше чатов или повторите позже.' : String(err && (err.message || err) || 'Ошибка');
+      updateApiDebugContent(bodyString, { error: errStr });
       setStatus('Ошибка', 'error');
-      toast(String(err.message || err), true);
-      const col = getColumnEl(0);
-      if (col) {
-        const content = col.querySelector('.column-content');
-        const empty = col.querySelector('.column-empty');
-        if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(String(err.message || err)) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>'; }
-        if (empty) empty.style.display = 'none';
-        col.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+      toast(errStr, true);
+      for (let i = 0; i < chats.length; i++) {
+        const col = getColumnEl(i);
+        if (col) {
+          const content = col.querySelector('.column-content');
+          const empty = col.querySelector('.column-empty');
+          if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(errStr) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>'; }
+          if (empty) empty.style.display = 'none';
+          col.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
+        }
       }
     } finally {
       document.getElementById('submitBtn').disabled = false;

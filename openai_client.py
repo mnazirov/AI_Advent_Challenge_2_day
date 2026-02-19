@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from openai import OpenAI
 
 DEFAULT_MODEL = "gpt-5.2"
 
-# Современные модели для веб-сравнения (Chat Completions API)
-CHAT_MODELS = (
+# Модели OpenAI для веб-сравнения (Chat Completions API)
+OPENAI_CHAT_MODELS = (
     "gpt-5.2",
     "gpt-5.2-instant",
     "gpt-5.2-thinking",
@@ -23,10 +24,31 @@ CHAT_MODELS = (
     "o1-mini",
     "o3-mini",
 )
+
+# Модели DeepSeek (API совместим с OpenAI; ключ DEEPSEEK_API_KEY в .env)
+DEEPSEEK_CHAT_MODELS = (
+    "deepseek-chat",
+    "deepseek-reasoner",
+)
+
+# Все модели для выбора в веб-интерфейсе
+CHAT_MODELS = OPENAI_CHAT_MODELS + DEEPSEEK_CHAT_MODELS
 DEFAULT_CHAT_MODEL = "gpt-4o"
 
-# Модели без поддержки параметров сэмплирования (temperature, top_p, penalties, seed)
-MODELS_WITHOUT_SAMPLING = frozenset(("o1", "o1-mini", "o3-mini", "gpt-5.2-thinking"))
+# Модели без поддержки параметров сэмплирования (temperature, top_p, penalties, seed).
+# См. docs/temperature.md. OpenAI: o1, o1-mini, o3-mini, gpt-5.2-thinking (reasoning).
+# DeepSeek: deepseek-reasoner (reasoning; params ignored by API, we omit them for clarity).
+MODELS_WITHOUT_SAMPLING = frozenset(("o1", "o1-mini", "o3-mini", "gpt-5.2-thinking", "deepseek-reasoner"))
+
+
+def get_chat_client(model: str) -> OpenAI:
+    """Return OpenAI client for the given model (OpenAI or DeepSeek)."""
+    if model in DEEPSEEK_CHAT_MODELS:
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+        if not api_key:
+            raise ValueError("DEEPSEEK_API_KEY is not set; add it to .env for DeepSeek models")
+        return OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+    return OpenAI()
 
 
 def _build_first_input(

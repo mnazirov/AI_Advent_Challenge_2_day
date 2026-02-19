@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 try:
     from dotenv import load_dotenv
@@ -15,11 +16,12 @@ except ImportError:
 
 from flask import Flask, jsonify, render_template, request
 
-from openai import OpenAI
 from openai_client import (
     create_message_chat,
+    get_chat_client,
     DEFAULT_CHAT_MODEL,
     CHAT_MODELS,
+    DEEPSEEK_CHAT_MODELS,
     MODELS_WITHOUT_SAMPLING,
 )
 from evaluator.pipeline import run_evaluation
@@ -30,6 +32,7 @@ load_dotenv()
 app = Flask(__name__)
 
 MAX_RUNS = 10  # max chats per request in compare-many
+RUN_TIMEOUT_SECONDS = 120  # max wait per run; on timeout that run gets error, others still returned
 
 
 def _normalize_messages(raw: list | None) -> list[dict[str, str]]:
@@ -60,8 +63,14 @@ def _run_with_config(
     seed: int | None = None,
 ) -> tuple[dict, str | None]:
     """Call create_message_chat (Chat Completions) with config; return (result dict, error)."""
+    if app.debug or os.environ.get("FLASK_ENV") == "development":
+        provider = "DeepSeek" if model in DEEPSEEK_CHAT_MODELS else "OpenAI"
+        logging.getLogger(__name__).debug(
+            "compare payload: model=%s provider=%s temperature=%s top_p=%s max_output_tokens=%s",
+            model, provider, temperature, top_p, max_output_tokens,
+        )
     try:
-        client = OpenAI()
+        client = get_chat_client(model)
         result = create_message_chat(
             client,
             model=model,
@@ -83,7 +92,7 @@ def _run_with_config(
 def _run_without_config(messages: list[dict[str, str]], model: str) -> tuple[dict, str | None]:
     """Call create_message_chat without system/stop/max_tokens; return (result dict, error)."""
     try:
-        client = OpenAI()
+        client = get_chat_client(model)
         result = create_message_chat(
             client,
             model=model,
@@ -285,13 +294,21 @@ def api_compare_many():
             )
             futures.append(fut)
         for fut in futures:
-            result, err = fut.result()
-            results.append({
-                "text": result.get("text", ""),
-                "error": err,
-                "usage": result.get("usage"),
-                "finish_reason": result.get("finish_reason"),
-            })
+            try:
+                result, err = fut.result(timeout=RUN_TIMEOUT_SECONDS)
+                results.append({
+                    "text": result.get("text", ""),
+                    "error": err,
+                    "usage": result.get("usage"),
+                    "finish_reason": result.get("finish_reason"),
+                })
+            except FuturesTimeoutError:
+                results.append({
+                    "text": "",
+                    "error": f"Timeout ({RUN_TIMEOUT_SECONDS} s)",
+                    "usage": None,
+                    "finish_reason": None,
+                })
 
     return jsonify({"results": results})
 
