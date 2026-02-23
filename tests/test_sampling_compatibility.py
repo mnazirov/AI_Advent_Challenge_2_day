@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from openai_client import (
     CHAT_MODELS,
+    HUGGINGFACE_CHAT_MODELS,
     MODELS_WITHOUT_SAMPLING,
     create_message_chat,
+    get_chat_client,
 )
 
 
@@ -158,3 +161,13 @@ def test_string_temperature_converted_and_clamped():
 
     create_message_chat(mock_client, "Hi", model="gpt-4o", temperature=1.5)  # float
     assert captured.get("temperature") == 1.5
+
+
+def test_get_chat_client_huggingface_uses_router_url():
+    """For a Hugging Face model, get_chat_client returns a client with HF router base_url."""
+    hf_model = HUGGINGFACE_CHAT_MODELS[0]
+    with patch.dict(os.environ, {"HUGGINGFACE_API_KEY": "hf_test_token"}, clear=False):
+        client = get_chat_client(hf_model)
+    base_str = str(client.base_url)
+    assert "router.huggingface.co" in base_str
+    assert "/v1" in base_str

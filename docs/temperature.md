@@ -17,6 +17,7 @@
 | gpt-5.2-thinking, o1, o1-mini, o3-mini | OpenAI | **Нет.** Reasoning-модели; параметры сэмплирования не поддерживаются. Не передавать. |
 | deepseek-chat | DeepSeek | Да. API совместим с OpenAI; дефолт temperature 1.0, см. [Parameter settings](https://api-docs.deepseek.com/quick_start/parameter_settings). |
 | deepseek-reasoner | DeepSeek | **Нет.** Temperature, top_p, presence_penalty, frequency_penalty не поддерживаются (игнорируются API). В проекте не отправляем. См. [Reasoning model](https://api-docs.deepseek.com/guides/reasoning_model). |
+| Модели Hugging Face (DeepSeek-R1, Qwen2.5, GLM-4.5 и др.) | Hugging Face | Да. OpenAI-совместимый API (router.huggingface.co); temperature, top_p, frequency_penalty, presence_penalty, seed в [Chat Completion](https://huggingface.co/docs/inference-providers/tasks/chat-completion). Reasoning-модели при необходимости можно добавить в `MODELS_WITHOUT_SAMPLING`. |
 
 ## Официальная документация
 
@@ -26,6 +27,8 @@
 - **DeepSeek**  
   - [The Temperature Parameter](https://api-docs.deepseek.com/quick_start/parameter_settings) — для deepseek-chat.  
   - [Reasoning Model (deepseek-reasoner)](https://api-docs.deepseek.com/guides/reasoning_model) — неподдерживаемые параметры.
+- **Hugging Face**  
+  - [Chat Completion](https://huggingface.co/docs/inference-providers/tasks/chat-completion) — параметры temperature, top_p, frequency_penalty, presence_penalty, seed.
 
 ## Модели, где была проблема / ограничение
 

@@ -179,6 +179,25 @@
     }
     .stop-tags-input:focus { outline: none; }
     .stop-tags-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .config-item-full { grid-column: 1 / -1; }
+    .config-filter-row { margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+    .config-filter-label { font-size: 0.8125rem; font-weight: 600; }
+    .config-filter-check { font-size: 0.75rem; font-weight: 400; margin-right: 0.75rem; white-space: nowrap; cursor: pointer; }
+    .config-filter-check input { margin: 0 0.25rem 0 0; vertical-align: middle; }
+    .config-slot.config-item-full { grid-column: 1 / -1; }
+    .hf-search-results { margin-top: 0.25rem; max-height: 12rem; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+    .hf-search-item { display: block; width: 100%; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.8125rem; background: none; border: none; cursor: pointer; color: var(--text); }
+    .hf-search-item:hover { background: var(--bg); }
+    .hf-search-empty { color: var(--text-muted); cursor: default; }
+    .hf-search-status { cursor: default; }
+    .hf-search-loading { color: var(--text-muted); font-style: italic; }
+    .hf-search-error { color: var(--baseline, #c00); }
+    .hf-search-wrap { display: flex; align-items: center; gap: 0.25rem; }
+    .hf-search-wrap input { flex: 1; min-width: 0; }
+    .hf-clear-btn { flex-shrink: 0; padding: 0.35rem 0.5rem; font-size: 1rem; line-height: 1; background: var(--border); border: none; border-radius: 6px; color: var(--text); cursor: pointer; }
+    .hf-clear-btn:hover { background: var(--text-muted); color: var(--surface); }
+    .hf-provider-hint a.hf-pricing-link { color: var(--accent); text-decoration: underline; }
+    .provider-pricing-hint a.hf-pricing-link { color: var(--accent); text-decoration: underline; }
 
     /* Horizontal scroll: each chat = one block (config + column), fixed width */
     .chats-and-results-scroll {
@@ -200,6 +219,39 @@
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      position: relative;
+      padding-left: 14px;
+    }
+    .chat-block-drag-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 12px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      border-radius: 6px 0 0 6px;
+      z-index: 1;
+    }
+    .chat-block-drag-handle:hover { color: var(--text); background: var(--bg); }
+    .chat-block-drag-handle:active { cursor: grabbing; }
+    .chat-block:only-child .chat-block-drag-handle { display: none; }
+    .chat-block:only-child { padding-left: 0; }
+    .chat-block.is-dragging { opacity: 0.6; }
+    .chat-block.drop-target::before {
+      content: '';
+      position: absolute;
+      left: -4px;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--accent);
+      border-radius: 4px;
+      z-index: 2;
+      pointer-events: none;
     }
     .chat-card {
       border: 1px solid var(--border);
@@ -219,7 +271,8 @@
     .chat-card .config-panel { margin-bottom: 0; border: none; border-radius: 0; border-top: 1px solid var(--border); }
     .chat-card .config-panel-header { border-radius: 0; }
     .chat-block .column { flex: 1; min-height: 200px; display: flex; flex-direction: column; }
-    .chat-block .column-body { flex: 1; }
+    .chat-block .column-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .chat-block .column-body .column-content { flex: 1; min-height: 0; overflow-y: auto; }
     .btn-add-chat { margin-bottom: 1rem; flex-shrink: 0; }
     .btn-remove-chat { font-size: 0.8125rem; padding: 0.25rem 0.5rem; }
     .btn-remove-chat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -284,14 +337,37 @@
     .message-content { white-space: pre-wrap; word-break: break-word; font-size: 0.875rem; line-height: 1.5; }
     .column-body .response-text mark.stop-highlight { background: var(--accent); color: #fff; padding: 0 2px; border-radius: 2px; }
     .column-metrics {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      padding: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      padding: 0.75rem 1rem;
       border-top: 1px solid var(--border);
+      background: var(--bg);
     }
-    .column-metrics dl { margin: 0; display: flex; flex-wrap: wrap; gap: 0 1rem; }
-    .column-metrics dt { font-weight: 500; }
-    .column-metrics dd { margin: 0; }
+    .column-metrics .metrics-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.5rem 1.5rem;
+      align-items: baseline;
+      margin: 0;
+      max-width: 100%;
+    }
+    .column-metrics .metrics-grid dt {
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .column-metrics .metrics-grid dd {
+      margin: 0;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .column-metrics .metric-value-best { color: var(--accent); font-weight: 500; }
+    .column-metrics .metrics-grid dt.metrics-compare-label { grid-column: 1 / -1; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    .column-metrics .metrics-grid dd.metrics-compare-value { grid-column: 1 / -1; }
+    @media (max-width: 380px) {
+      .column-metrics .metrics-grid { grid-template-columns: 1fr; gap: 0.25rem 0; }
+      .column-metrics .metrics-grid dt { margin-top: 0.35rem; }
+      .column-metrics .metrics-grid dt:first-child { margin-top: 0; }
+    }
     .empty-state {
       text-align: center;
       padding: 2rem 1rem;
@@ -309,6 +385,8 @@
     /* Error state */
     .error-inline { color: var(--error); font-size: 0.875rem; }
     .error-inline .retry-btn { margin-top: 0.5rem; }
+    .error-hint { margin-top: 0.5rem; font-size: 0.8125rem; color: var(--text-muted); }
+    .error-hint a { color: var(--accent); }
 
     /* Diff */
     .diff-toolbar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
@@ -505,19 +583,86 @@
   <script>
   window.MODELS_WITHOUT_SAMPLING = {{ models_without_sampling|tojson }};
   window.CHAT_MODELS = {{ models|tojson }};
+  window.MODELS_OPENAI = {{ models_openai|tojson }};
+  window.MODELS_DEEPSEEK = {{ models_deepseek|tojson }};
   window.DEFAULT_CHAT_MODEL = {{ default_model|tojson }};
   </script>
   <script>
 (function() {
   const MODELS_WITHOUT_SAMPLING = new Set(window.MODELS_WITHOUT_SAMPLING || []);
   const CHAT_MODELS = window.CHAT_MODELS || [];
-  const DEFAULT_CHAT_MODEL = window.DEFAULT_CHAT_MODEL || (CHAT_MODELS[0] || 'gpt-4o-mini');
+  const MODELS_OPENAI = window.MODELS_OPENAI || [];
+  const MODELS_DEEPSEEK = window.MODELS_DEEPSEEK || [];
+  const DEFAULT_CHAT_MODEL = window.DEFAULT_CHAT_MODEL || (MODELS_OPENAI[0] || 'gpt-4o');
   const STORAGE_KEYS = {
     configCollapsed: 'compare_config_panel_collapsed',
     theme: 'compare_theme',
     history: 'compare_history',
     settings: 'compare_settings',
+    visibleConfigSlots: 'compare_visible_config_slots',
+    layout: 'compare_layout',
   };
+  const CONFIG_SLOTS = [
+    { id: 'system_prompt', label: 'System Prompt' },
+    { id: 'stop_sequences', label: 'Stop Sequences' },
+    { id: 'max_output_tokens', label: 'Max output tokens' },
+    { id: 'sampling', label: 'Сэмплирование' },
+    { id: 'model_openai', label: 'Модель OpenAI' },
+    { id: 'model_deepseek', label: 'Модель DeepSeek' },
+    { id: 'price_input', label: 'Цена input' },
+    { id: 'price_output', label: 'Цена output' },
+    { id: 'hf_search', label: 'Поиск Hugging Face' },
+  ];
+  const DEFAULT_VISIBLE_SLOTS = CONFIG_SLOTS.map(s => s.id);
+  function getVisibleConfigSlots(chatId) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.visibleConfigSlots);
+      if (!raw) return DEFAULT_VISIBLE_SLOTS.slice();
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object' && !Array.isArray(data) && data[chatId]) {
+        const arr = data[chatId];
+        if (Array.isArray(arr)) return arr.filter(id => CONFIG_SLOTS.some(s => s.id === id));
+      }
+      if (Array.isArray(data)) return data.filter(id => CONFIG_SLOTS.some(s => s.id === id));
+      return DEFAULT_VISIBLE_SLOTS.slice();
+    } catch (_) { return DEFAULT_VISIBLE_SLOTS.slice(); }
+  }
+  function setVisibleConfigSlots(chatId, visibleIds, card) {
+    const set = new Set(visibleIds);
+    const arr = CONFIG_SLOTS.map(s => s.id).filter(id => set.has(id));
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.visibleConfigSlots);
+      let obj = {};
+      if (raw) try { const parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) obj = parsed; } catch (_) {}
+      obj[chatId] = arr;
+      localStorage.setItem(STORAGE_KEYS.visibleConfigSlots, JSON.stringify(obj));
+    } catch (_) {}
+    const container = card || document;
+    container.querySelectorAll && container.querySelectorAll('.config-slot[data-config-slot]').forEach(el => {
+      const slot = el.getAttribute('data-config-slot');
+      if (slot) el.style.display = set.has(slot) ? '' : 'none';
+    });
+    if (card) {
+      card.querySelectorAll('.config-filter input[data-slot]').forEach(cb => {
+        if (cb.type === 'checkbox') cb.checked = set.has(cb.getAttribute('data-slot'));
+      });
+    }
+  }
+  function applyConfigSlotsVisibility() {
+    scrollContainer.querySelectorAll('.chat-block').forEach(block => {
+      const chatId = block.getAttribute('data-chat-id');
+      const card = block.querySelector('.chat-card');
+      if (!chatId || !card) return;
+      const set = new Set(getVisibleConfigSlots(chatId));
+      card.querySelectorAll('.config-slot[data-config-slot]').forEach(el => {
+        const slot = el.getAttribute('data-config-slot');
+        if (slot) el.style.display = set.has(slot) ? '' : 'none';
+      });
+      card.querySelectorAll('.config-filter input[data-slot]').forEach(cb => {
+        if (cb.type === 'checkbox') cb.checked = set.has(cb.getAttribute('data-slot'));
+      });
+    });
+  }
   const MAX_HISTORY = 10;
   const MAX_RUNS = 10;
   const MAX_STOP_SEQUENCES = 4;
@@ -530,21 +675,78 @@
       stop_sequences: [],
       max_output_tokens: null,
       model: DEFAULT_CHAT_MODEL,
+      price_input_per_1m: null,
+      price_output_per_1m: null,
       temperature_enabled: false,
-      temperature: null,
+      temperature: 0.7,
       top_p_enabled: false,
-      top_p: null,
+      top_p: 1,
       frequency_penalty_enabled: false,
-      frequency_penalty: null,
+      frequency_penalty: 0,
       presence_penalty_enabled: false,
-      presence_penalty: null,
+      presence_penalty: 0,
       seed_enabled: false,
       seed: null,
+    };
+  }
+  function copyConfig(src) {
+    if (!src || typeof src !== 'object') return getDefaultConfig();
+    return {
+      system_prompt: src.system_prompt != null ? String(src.system_prompt) : '',
+      stop_sequences: Array.isArray(src.stop_sequences) ? src.stop_sequences.slice() : [],
+      max_output_tokens: src.max_output_tokens != null && src.max_output_tokens !== '' ? src.max_output_tokens : null,
+      model: src.model || DEFAULT_CHAT_MODEL,
+      price_input_per_1m: src.price_input_per_1m != null && src.price_input_per_1m !== '' ? src.price_input_per_1m : null,
+      price_output_per_1m: src.price_output_per_1m != null && src.price_output_per_1m !== '' ? src.price_output_per_1m : null,
+      temperature_enabled: !!src.temperature_enabled,
+      temperature: src.temperature != null && src.temperature !== '' ? src.temperature : 0.7,
+      top_p_enabled: !!src.top_p_enabled,
+      top_p: src.top_p != null && src.top_p !== '' ? src.top_p : 1,
+      frequency_penalty_enabled: !!src.frequency_penalty_enabled,
+      frequency_penalty: src.frequency_penalty != null && src.frequency_penalty !== '' ? src.frequency_penalty : 0,
+      presence_penalty_enabled: !!src.presence_penalty_enabled,
+      presence_penalty: src.presence_penalty != null && src.presence_penalty !== '' ? src.presence_penalty : 0,
+      seed_enabled: !!src.seed_enabled,
+      seed: src.seed != null && src.seed !== '' ? src.seed : null,
     };
   }
 
   let nextChatId = 1;
   let chats = [{ id: 'chat_0', name: null, config: getDefaultConfig(), messages: [] }];
+
+  function loadLayout() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.layout);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const configs = data.configs;
+      if (!Array.isArray(configs) || configs.length < 1 || configs.length > MAX_RUNS) return;
+      const base = getDefaultConfig();
+      chats = configs.map(function(item, i) {
+        return {
+          id: 'chat_' + i,
+          name: item.name != null ? item.name : null,
+          config: copyConfig(item.config && typeof item.config === 'object' ? item.config : base),
+          messages: [],
+        };
+      });
+      nextChatId = chats.length;
+    } catch (_) {}
+  }
+  function saveLayout() {
+    try {
+      const configs = chats.map(function(c) { return { name: c.name, config: c.config }; });
+      localStorage.setItem(STORAGE_KEYS.layout, JSON.stringify({ configs: configs }));
+    } catch (_) {}
+  }
+  let saveLayoutDebounce;
+  function debouncedSaveLayout() {
+    clearTimeout(saveLayoutDebounce);
+    saveLayoutDebounce = setTimeout(saveLayout, 400);
+  }
+
+  loadLayout();
+
   const scrollContainer = document.getElementById('chatsAndResultsScroll');
   const addChatBtn = document.getElementById('addChatBtn');
 
@@ -560,6 +762,17 @@
     const div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
+  }
+  function formatCost(cost) {
+    if (cost == null || typeof cost !== 'number') return '—';
+    return cost < 0.01 ? '$' + cost.toFixed(4) : '$' + cost.toFixed(2);
+  }
+  function formatApiErrorHtml(errorStr) {
+    if (!errorStr) return '';
+    const hint = (typeof errorStr === 'string' && (errorStr.indexOf('not supported by any provider') !== -1 || errorStr.indexOf('model_not_supported') !== -1))
+      ? '<p class="error-hint">Убедитесь, что нужный провайдер (например, Featherless AI) включён в <a href="https://huggingface.co/settings/inference-providers" target="_blank" rel="noopener noreferrer">настройках Hugging Face → Inference Providers</a>.</p>'
+      : '';
+    return '<div class="error-inline">' + escapeHtml(errorStr) + hint + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
   }
 
   /** Minimal markdown to HTML (safe: escapes then applies patterns). Supports **bold**, *italic*, `code`, ```blocks```, [links](url), paragraphs. */
@@ -671,25 +884,44 @@
 
   function buildConfigBody(chat, chatId) {
     const c = chat.config;
-    const modelOptions = CHAT_MODELS.map(m => '<option value="' + escapeHtml(m) + '"' + (c.model === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('');
+    const openaiVal = (c.model && MODELS_OPENAI.indexOf(c.model) !== -1) ? c.model : '';
+    const deepseekVal = (c.model && MODELS_DEEPSEEK.indexOf(c.model) !== -1) ? c.model : '';
+    let openaiOptions = '<option value="">— не выбрано —</option>' + MODELS_OPENAI.map(m => '<option value="' + escapeHtml(m) + '"' + (openaiVal === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('');
+    let deepseekOptions = '<option value="">— не выбрано —</option>' + MODELS_DEEPSEEK.map(m => '<option value="' + escapeHtml(m) + '"' + (deepseekVal === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('');
     const stopTagsHtml = (c.stop_sequences || []).slice(0, MAX_STOP_SEQUENCES).map((s, i) =>
       '<span class="stop-tag">' + escapeHtml(s) + ' <button type="button" data-index="' + i + '" aria-label="Удалить">×</button></span>'
     ).join('');
-    return '<div class="config-grid">' +
-      '<div class="config-item"><label for="sp_' + escapeHtml(chatId) + '">System Prompt</label><textarea id="sp_' + escapeHtml(chatId) + '" data-field="system_prompt" placeholder="Инструкции для модели (опционально)" rows="3">' + escapeHtml(c.system_prompt || '') + '</textarea></div>' +
-      '<div class="config-item"><label>Stop Sequences (до 4)</label><div class="stop-tags-wrap" data-field="stop-wrap"><div class="stop-tags-list" style="display:contents">' + stopTagsHtml + '</div><input type="text" class="stop-tags-input" data-field="stop-input" placeholder="Добавить..." aria-label="Добавить stop sequence" /></div><div class="stop-tags-hint">Максимум 4 последовательности</div></div>' +
-      '<div class="config-item"><label for="max_' + escapeHtml(chatId) + '">Max output tokens</label><input type="number" id="max_' + escapeHtml(chatId) + '" data-field="max_output_tokens" min="1" max="4096" placeholder="512" value="' + (c.max_output_tokens != null && c.max_output_tokens !== '' ? escapeHtml(String(c.max_output_tokens)) : '') + '" /></div>' +
-      '<div class="config-section"><div class="config-section-title">Сэмплирование</div><p class="param-hint param-hint-block sampling-unavailable-hint" data-field="sampling-hint" style="display:none;">Для выбранной модели недоступно.</p><div class="config-grid sampling-fields">' +
+    const visible = getVisibleConfigSlots(chatId);
+    const filterRow = '<div class="config-filter config-filter-row"><span class="config-filter-label">Показывать:</span> ' + CONFIG_SLOTS.map(s => {
+      const checked = visible.indexOf(s.id) !== -1 ? ' checked' : '';
+      return '<label class="config-filter-check"><input type="checkbox" data-slot="' + escapeHtml(s.id) + '"' + checked + ' aria-label="Показать ' + escapeHtml(s.label) + '" /> ' + escapeHtml(s.label) + '</label>';
+    }).join(' ') + '</div>';
+    const grid =
+      '<div class="config-slot" data-config-slot="system_prompt"><div class="config-item"><label for="sp_' + escapeHtml(chatId) + '">System Prompt</label><textarea id="sp_' + escapeHtml(chatId) + '" data-field="system_prompt" placeholder="Инструкции для модели (опционально)" rows="3">' + escapeHtml(c.system_prompt || '') + '</textarea></div></div>' +
+      '<div class="config-slot" data-config-slot="stop_sequences"><div class="config-item"><label>Stop Sequences (до 4)</label><div class="stop-tags-wrap" data-field="stop-wrap"><div class="stop-tags-list" style="display:contents">' + stopTagsHtml + '</div><input type="text" class="stop-tags-input" data-field="stop-input" placeholder="Добавить..." aria-label="Добавить stop sequence" /></div><div class="stop-tags-hint">Максимум 4 последовательности</div></div></div>' +
+      '<div class="config-slot" data-config-slot="max_output_tokens"><div class="config-item"><label for="max_' + escapeHtml(chatId) + '">Max output tokens</label><input type="number" id="max_' + escapeHtml(chatId) + '" data-field="max_output_tokens" min="1" max="4096" placeholder="без ограничения" value="' + (c.max_output_tokens != null && c.max_output_tokens !== '' ? escapeHtml(String(c.max_output_tokens)) : '') + '" /></div></div>' +
+      '<div class="config-slot" data-config-slot="sampling"><div class="config-section"><div class="config-section-title">Сэмплирование</div><p class="param-hint param-hint-block sampling-unavailable-hint" data-field="sampling-hint" style="display:none;">Для выбранной модели недоступно.</p><div class="config-grid sampling-fields">' +
       samplingParamRow('temperature', 'Temperature', c.temperature_enabled, c.temperature, '0', '2', '0.1', '0.7', chatId) +
       samplingParamRow('top_p', 'Top P', c.top_p_enabled, c.top_p, '0', '1', '0.01', '1', chatId) +
       samplingParamRow('frequency_penalty', 'Frequency penalty', c.frequency_penalty_enabled, c.frequency_penalty, '-2', '2', '0.1', '0', chatId) +
       samplingParamRow('presence_penalty', 'Presence penalty', c.presence_penalty_enabled, c.presence_penalty, '-2', '2', '0.1', '0', chatId) +
       samplingParamRow('seed', 'Seed', c.seed_enabled, c.seed, '', '', '', 'опционально', chatId) +
-      '</div></div><div class="config-item"><label for="model_' + escapeHtml(chatId) + '">Модель</label><select id="model_' + escapeHtml(chatId) + '" data-field="model">' + modelOptions + '</select></div></div>';
+      '</div></div></div>' +
+      '<div class="config-slot" data-config-slot="model_openai"><div class="config-item"><label for="model_openai_' + escapeHtml(chatId) + '">Модель OpenAI</label><select id="model_openai_' + escapeHtml(chatId) + '" data-field="model_openai">' + openaiOptions + '</select></div></div>' +
+      '<div class="config-slot" data-config-slot="model_deepseek"><div class="config-item"><label for="model_deepseek_' + escapeHtml(chatId) + '">Модель DeepSeek</label><select id="model_deepseek_' + escapeHtml(chatId) + '" data-field="model_deepseek">' + deepseekOptions + '</select></div></div>' +
+      '<div class="config-slot" data-config-slot="price_input"><div class="config-item"><label for="price_in_' + escapeHtml(chatId) + '">Цена input ($/1M токенов)</label><input type="number" id="price_in_' + escapeHtml(chatId) + '" data-field="price_input_per_1m" min="0" step="0.01" placeholder="по умолчанию" value="' + (c.price_input_per_1m != null && c.price_input_per_1m !== '' ? escapeHtml(String(c.price_input_per_1m)) : '') + '" /></div></div>' +
+      '<div class="config-slot" data-config-slot="price_output"><div class="config-item"><label for="price_out_' + escapeHtml(chatId) + '">Цена output ($/1M токенов)</label><input type="number" id="price_out_' + escapeHtml(chatId) + '" data-field="price_output_per_1m" min="0" step="0.01" placeholder="по умолчанию" value="' + (c.price_output_per_1m != null && c.price_output_per_1m !== '' ? escapeHtml(String(c.price_output_per_1m)) : '') + '" /></div></div>' +
+      '<div class="config-slot config-item-full" data-field="provider-pricing-hint-wrap" style="display:none"><div class="provider-pricing-hint" data-field="provider-pricing-hint" style="font-size:0.75rem;color:var(--text-muted);"></div></div>' +
+      '<div class="config-slot config-item-full" data-config-slot="hf_search"><div class="config-item config-item-full"><label for="hf_search_' + escapeHtml(chatId) + '">Поиск по Hugging Face</label><div class="hf-search-wrap"><input type="text" id="hf_search_' + escapeHtml(chatId) + '" data-field="hf_search" placeholder="Название или автор модели..." autocomplete="off" /><button type="button" class="hf-clear-btn" data-field="hf_clear" aria-label="Очистить модель" title="Очистить выбранную модель" style="display:none;">×</button></div><div class="hf-search-results" data-field="hf-results" role="listbox" aria-label="Результаты поиска" style="display:none;"></div><div class="hf-provider-hint" data-field="hf-provider-hint" style="margin-top:0.25rem;font-size:0.75rem;color:var(--text-muted);"></div></div></div>';
+    return filterRow + '<div class="config-grid">' + grid + '</div>';
   }
 
-  function updateSamplingAvailabilityInCard(card) {
-    const model = (card.querySelector('[data-field="model"]') || {}).value;
+  function updateSamplingAvailabilityInCard(card, chat) {
+    const openaiSel = card.querySelector('[data-field="model_openai"]');
+    const deepseekSel = card.querySelector('[data-field="model_deepseek"]');
+    const openaiVal = openaiSel ? openaiSel.value : '';
+    const deepseekVal = deepseekSel ? deepseekSel.value : '';
+    const model = openaiVal || deepseekVal || (chat && chat.config.model && chat.config.model.indexOf('/') !== -1 ? chat.config.model : '');
     const unavailable = MODELS_WITHOUT_SAMPLING.has(model);
     ['temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'seed'].forEach(f => {
       const check = card.querySelector('[data-field="' + f + '_enabled"]');
@@ -710,7 +942,18 @@
       if (sp) cfg.system_prompt = sp.value || '';
       const maxEl = card.querySelector('[data-field="max_output_tokens"]');
       if (maxEl) { const v = maxEl.value.trim(); cfg.max_output_tokens = v ? parseInt(v, 10) : null; }
-      cfg.model = (card.querySelector('[data-field="model"]') || {}).value || null;
+      const openaiSel = card.querySelector('[data-field="model_openai"]');
+      const deepseekSel = card.querySelector('[data-field="model_deepseek"]');
+      const openaiVal = openaiSel ? openaiSel.value : '';
+      const deepseekVal = deepseekSel ? deepseekSel.value : '';
+      if (openaiVal) cfg.model = openaiVal;
+      else if (deepseekVal) cfg.model = deepseekVal;
+      else if (cfg.model && cfg.model.indexOf('/') !== -1) { /* keep HF model */ }
+      else cfg.model = null;
+      const priceInEl = card.querySelector('[data-field="price_input_per_1m"]');
+      const priceOutEl = card.querySelector('[data-field="price_output_per_1m"]');
+      if (priceInEl) { const v = priceInEl.value.trim(); cfg.price_input_per_1m = v ? parseFloat(v) : null; }
+      if (priceOutEl) { const v = priceOutEl.value.trim(); cfg.price_output_per_1m = v ? parseFloat(v) : null; }
       samplingFields.forEach(f => {
         const check = card.querySelector('[data-field="' + f + '_enabled"]');
         const el = card.querySelector('[data-field="' + f + '"]');
@@ -718,7 +961,8 @@
         cfg[f + '_enabled'] = !!enabled;
         cfg[f] = enabled && el ? (el.value.trim() || null) : null;
       });
-      updateSamplingAvailabilityInCard(card);
+      updateSamplingAvailabilityInCard(card, chat);
+      debouncedSaveLayout();
     };
     function toggleSamplingInput(field) {
       const check = card.querySelector('[data-field="' + field + '_enabled"]');
@@ -732,7 +976,15 @@
       }
       updateConfig();
     }
-    card.querySelectorAll('[data-field="system_prompt"], [data-field="max_output_tokens"], [data-field="model"]').forEach(el => {
+    card.querySelectorAll('.config-filter input[data-slot]').forEach(cb => {
+      cb.addEventListener('change', function() {
+        const set = new Set(getVisibleConfigSlots(chat.id));
+        const slot = this.getAttribute('data-slot');
+        if (this.checked) set.add(slot); else set.delete(slot);
+        setVisibleConfigSlots(chat.id, Array.from(set), card);
+      });
+    });
+    card.querySelectorAll('[data-field="system_prompt"], [data-field="max_output_tokens"], [data-field="model_openai"], [data-field="model_deepseek"], [data-field="price_input_per_1m"], [data-field="price_output_per_1m"]').forEach(el => {
       el.addEventListener('change', updateConfig);
       el.addEventListener('input', updateConfig);
     });
@@ -742,10 +994,31 @@
       if (check) { check.addEventListener('change', () => toggleSamplingInput(f)); }
       if (el) { el.addEventListener('change', updateConfig); el.addEventListener('input', updateConfig); }
     });
-    const modelSelect = card.querySelector('[data-field="model"]');
-    if (modelSelect) modelSelect.addEventListener('change', () => {
+    const openaiSelect = card.querySelector('[data-field="model_openai"]');
+    const deepseekSelect = card.querySelector('[data-field="model_deepseek"]');
+    function updateProviderPricingHint() {
+      const wrap = card.querySelector('[data-field="provider-pricing-hint-wrap"]');
+      const hintEl = card.querySelector('[data-field="provider-pricing-hint"]');
+      if (!wrap || !hintEl) return;
+      const openaiVal = openaiSelect ? openaiSelect.value : '';
+      const deepseekVal = deepseekSelect ? deepseekSelect.value : '';
+      if (openaiVal) {
+        wrap.style.display = '';
+        hintEl.innerHTML = 'Укажите цены по данным <a class="hf-pricing-link" href="https://platform.openai.com/docs/pricing" target="_blank" rel="noopener">OpenAI Pricing</a> (Input $/1M, Output $/1M) или оставьте пусто — используются встроенные цены.';
+      } else if (deepseekVal) {
+        wrap.style.display = '';
+        hintEl.innerHTML = 'Укажите цены по данным <a class="hf-pricing-link" href="https://api-docs.deepseek.com/quick_start/pricing-details-usd" target="_blank" rel="noopener">DeepSeek Pricing</a> (Input $/1M, Output $/1M) или оставьте пусто — используются встроенные цены.';
+      } else {
+        wrap.style.display = 'none';
+        hintEl.textContent = '';
+      }
+    }
+    function onModelDropdownChange() {
+      const hintEl = card.querySelector('[data-field="hf-provider-hint"]');
+      if (hintEl) hintEl.textContent = '';
+      updateProviderPricingHint();
       updateConfig();
-      if (MODELS_WITHOUT_SAMPLING.has(chat.config.model)) {
+      if (chat.config.model && MODELS_WITHOUT_SAMPLING.has(chat.config.model)) {
         samplingFields.forEach(f => {
           chat.config[f + '_enabled'] = false;
           chat.config[f] = null;
@@ -755,8 +1028,147 @@
           if (el) el.value = '';
         });
       }
-      updateSamplingAvailabilityInCard(card);
+      updateSamplingAvailabilityInCard(card, chat);
+    }
+    function clearHfSelection() {
+      const hfSearch = card.querySelector('[data-field="hf_search"]');
+      const hfResults = card.querySelector('[data-field="hf-results"]');
+      const hfHint = card.querySelector('[data-field="hf-provider-hint"]');
+      const hfClearBtn = card.querySelector('[data-field="hf_clear"]');
+      if (hfSearch) hfSearch.value = '';
+      if (hfResults) { hfResults.style.display = 'none'; hfResults.innerHTML = ''; }
+      if (hfHint) hfHint.textContent = '';
+      if (hfClearBtn) hfClearBtn.style.display = 'none';
+    }
+    function setHfSelectedModel(modelId) {
+      const hfSearch = card.querySelector('[data-field="hf_search"]');
+      const hfClearBtn = card.querySelector('[data-field="hf_clear"]');
+      if (hfSearch) hfSearch.value = modelId || '';
+      if (hfClearBtn) hfClearBtn.style.display = (modelId && modelId.trim()) ? '' : 'none';
+    }
+    if (openaiSelect) openaiSelect.addEventListener('change', () => {
+      if (openaiSelect.value) {
+        if (deepseekSelect) deepseekSelect.value = '';
+        clearHfSelection();
+      }
+      onModelDropdownChange();
     });
+    if (deepseekSelect) deepseekSelect.addEventListener('change', () => {
+      if (deepseekSelect.value) {
+        if (openaiSelect) openaiSelect.value = '';
+        clearHfSelection();
+      }
+      onModelDropdownChange();
+    });
+    const hfSearchEl = card.querySelector('[data-field="hf_search"]');
+    const hfResultsEl = card.querySelector('[data-field="hf-results"]');
+    if (hfSearchEl && hfResultsEl) {
+      let hfSearchDebounce;
+      let hfSearchAbort = null;
+      hfSearchEl.addEventListener('input', () => {
+        clearTimeout(hfSearchDebounce);
+        if (hfSearchAbort) { hfSearchAbort.abort(); hfSearchAbort = null; }
+        const q = hfSearchEl.value.trim();
+        if (q.length < 2) {
+          hfResultsEl.style.display = 'none';
+          hfResultsEl.innerHTML = '';
+          if (!q && chat.config.model && chat.config.model.indexOf('/') !== -1) {
+            chat.config.model = null;
+            setHfSelectedModel('');
+            updateConfig();
+            updateProviderPricingHint();
+            updateSamplingAvailabilityInCard(card, chat);
+          }
+          return;
+        }
+        hfResultsEl.innerHTML = '<div class="hf-search-item hf-search-status hf-search-loading">Идёт загрузка…</div>';
+        hfResultsEl.style.display = 'block';
+        hfSearchDebounce = setTimeout(() => {
+          hfSearchAbort = new AbortController();
+          fetch('/api/hf-models?search=' + encodeURIComponent(q) + '&limit=20', { signal: hfSearchAbort.signal })
+            .then(r => { if (!r.ok) throw new Error(r.statusText || 'HTTP ' + r.status); return r.json(); })
+            .then(data => {
+              if (data.error) {
+                hfResultsEl.innerHTML = '<div class="hf-search-item hf-search-status hf-search-error">Ошибка: ' + escapeHtml(String(data.error)) + '</div>';
+                return;
+              }
+              const models = (data.models || []).filter(m => m && m.id);
+              if (models.length === 0) {
+                hfResultsEl.innerHTML = '<div class="hf-search-item hf-search-status hf-search-empty">Ничего не найдено</div>';
+                return;
+              }
+              hfResultsEl.innerHTML = models.map(m => '<button type="button" class="hf-search-item" data-model-id="' + escapeHtml(m.id) + '" role="option">' + escapeHtml(m.id) + '</button>').join('');
+              hfResultsEl.querySelectorAll('.hf-search-item[data-model-id]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                  const id = btn.getAttribute('data-model-id');
+                  if (!id) return;
+                  chat.config.model = id;
+                  if (openaiSelect) openaiSelect.value = '';
+                  if (deepseekSelect) deepseekSelect.value = '';
+                  hfResultsEl.style.display = 'none';
+                  setHfSelectedModel(id);
+                  updateConfig();
+                  updateSamplingAvailabilityInCard(card, chat);
+                  fetch('/api/hf-model-info?model=' + encodeURIComponent(id)).then(r => r.json()).then(function(info) {
+                    const p = info && info.pricing;
+                    if (p && typeof p.price_input_per_1m === 'number' && typeof p.price_output_per_1m === 'number') {
+                      const priceInEl = card.querySelector('[data-field="price_input_per_1m"]');
+                      const priceOutEl = card.querySelector('[data-field="price_output_per_1m"]');
+                      if (priceInEl) { priceInEl.value = p.price_input_per_1m; }
+                      if (priceOutEl) { priceOutEl.value = p.price_output_per_1m; }
+                      chat.config.price_input_per_1m = p.price_input_per_1m;
+                      chat.config.price_output_per_1m = p.price_output_per_1m;
+                      updateConfig();
+                    }
+                    const providers = info && info.providers;
+                    const hintEl = card.querySelector('[data-field="hf-provider-hint"]');
+                    if (hintEl) {
+                      let t = 'Выбрана: ' + id;
+                      if (providers && providers.length) t += ' (Провайдер: ' + providers.join(', ') + ')';
+                      if (!p || typeof p.price_input_per_1m !== 'number') t += ' Цены не найдены в API — укажите вручную по данным <a class="hf-pricing-link" href="https://huggingface.co/inference/models?desc_sort=pricingInput" target="_blank" rel="noopener">Hugging Face Inference Models</a> (колонки Input $/1M, Output $/1M).';
+                      hintEl.innerHTML = t;
+                    }
+                  }).catch(function() {});
+                });
+              });
+            })
+            .catch(err => {
+              if (err.name === 'AbortError') return;
+              const msg = err.message || 'Ошибка сети';
+              hfResultsEl.innerHTML = '<div class="hf-search-item hf-search-status hf-search-error">Ошибка: ' + escapeHtml(msg) + '</div>';
+              hfResultsEl.style.display = 'block';
+            });
+        }, 300);
+      });
+      hfSearchEl.addEventListener('blur', () => { setTimeout(() => { hfResultsEl.style.display = 'none'; }, 200); });
+      const hfClearBtn = card.querySelector('[data-field="hf_clear"]');
+      if (hfClearBtn) hfClearBtn.addEventListener('click', () => {
+        const hfHint = card.querySelector('[data-field="hf-provider-hint"]');
+        if (chat.config.model && chat.config.model.indexOf('/') !== -1) chat.config.model = null;
+        if (hfHint) hfHint.textContent = '';
+        setHfSelectedModel('');
+        updateConfig();
+        updateProviderPricingHint();
+        updateSamplingAvailabilityInCard(card, chat);
+      });
+    }
+    if (chat.config.model && chat.config.model.indexOf('/') !== -1) {
+      setHfSelectedModel(chat.config.model);
+      const hintEl = card.querySelector('[data-field="hf-provider-hint"]');
+      if (hintEl) hintEl.textContent = 'Выбрана: ' + chat.config.model;
+      fetch('/api/hf-model-info?model=' + encodeURIComponent(chat.config.model)).then(r => r.json()).then(function(info) {
+        const p = info && info.pricing;
+        const providers = info && info.providers;
+        const h = card.querySelector('[data-field="hf-provider-hint"]');
+        if (h) {
+          let t = 'Выбрана: ' + chat.config.model;
+          if (providers && providers.length) t += ' (Провайдер: ' + providers.join(', ') + ')';
+          if (!p || typeof p.price_input_per_1m !== 'number') t += ' Цены не найдены в API — укажите вручную по <a class="hf-pricing-link" href="https://huggingface.co/inference/models?desc_sort=pricingInput" target="_blank" rel="noopener">HF Inference Models</a> (Input/Output $/1M).';
+          h.innerHTML = t;
+        }
+      }).catch(function() {});
+    }
+    updateProviderPricingHint();
     const stopWrap = card.querySelector('[data-field="stop-wrap"]');
     const stopList = stopWrap && stopWrap.querySelector('.stop-tags-list');
     const stopInput = stopWrap && stopWrap.querySelector('[data-field="stop-input"]');
@@ -773,6 +1185,7 @@
       if (chat.config.stop_sequences.includes(v)) return;
       chat.config.stop_sequences.push(v);
       renderStopTags();
+      debouncedSaveLayout();
       if (stopInput) stopInput.value = '';
     }
     if (stopInput) {
@@ -786,6 +1199,7 @@
       if (idx != null && chat.config.stop_sequences) {
         chat.config.stop_sequences.splice(parseInt(idx, 10), 1);
         renderStopTags();
+        debouncedSaveLayout();
       }
     });
     const nameInput = card.querySelector('[data-field="chat_name"]');
@@ -797,6 +1211,7 @@
         if (titleEl) titleEl.textContent = getChatLabel(chat, index);
         const tabEl = document.getElementById('tab-' + chat.id);
         if (tabEl) tabEl.textContent = getChatLabel(chat, index);
+        debouncedSaveLayout();
       });
       nameInput.addEventListener('change', () => {
         chat.name = nameInput.value.trim() || null;
@@ -805,18 +1220,59 @@
         if (titleEl) titleEl.textContent = getChatLabel(chat, index);
         const tabEl = document.getElementById('tab-' + chat.id);
         if (tabEl) tabEl.textContent = getChatLabel(chat, index);
+        debouncedSaveLayout();
       });
     }
-    updateSamplingAvailabilityInCard(card);
+    updateSamplingAvailabilityInCard(card, chat);
   }
 
   function renderChatBlocks() {
     scrollContainer.innerHTML = '';
+    while (lastResults.length < chats.length) lastResults.push(undefined);
     chats.forEach((chat, index) => {
       const block = document.createElement('div');
       block.className = 'chat-block';
       block.setAttribute('data-chat-index', String(index));
       block.setAttribute('data-chat-id', chat.id);
+
+      const handle = document.createElement('div');
+      handle.className = 'chat-block-drag-handle';
+      handle.setAttribute('draggable', 'true');
+      handle.setAttribute('aria-label', 'Переместить колонку');
+      handle.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.2"/><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="4" r="1.2"/><circle cx="8" cy="8" r="1.2"/></svg>';
+      handle.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', String(index));
+        e.dataTransfer.effectAllowed = 'move';
+        block.classList.add('is-dragging');
+      });
+      handle.addEventListener('dragend', () => {
+        scrollContainer.querySelectorAll('.chat-block').forEach(b => b.classList.remove('is-dragging', 'drop-target'));
+      });
+
+      block.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        if (fromIdx === index) return;
+        block.classList.add('drop-target');
+      });
+      block.addEventListener('dragleave', () => block.classList.remove('drop-target'));
+      block.addEventListener('drop', (e) => {
+        e.preventDefault();
+        block.classList.remove('drop-target');
+        scrollContainer.querySelectorAll('.chat-block').forEach(b => b.classList.remove('drop-target'));
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        const toIdx = index;
+        if (fromIdx === toIdx || isNaN(fromIdx) || isNaN(toIdx)) return;
+        const chatMoved = chats.splice(fromIdx, 1)[0];
+        const resultMoved = lastResults.splice(fromIdx, 1)[0];
+        const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
+        chats.splice(insertIdx, 0, chatMoved);
+        lastResults.splice(insertIdx, 0, resultMoved);
+        renderChatBlocks();
+        renderTabsMobile();
+        updateDiffToolbarVisibility();
+      });
 
       const card = document.createElement('div');
       card.className = 'chat-card';
@@ -855,6 +1311,8 @@
       });
       bindCardToChat(card, chat, index);
 
+      block.insertBefore(handle, block.firstChild);
+
       col.querySelector('.copy-btn').addEventListener('click', () => {
         const text = lastResults[index] && lastResults[index].text;
         if (!text) return;
@@ -865,16 +1323,18 @@
       block.appendChild(col);
       scrollContainer.appendChild(block);
     });
+    applyConfigSlotsVisibility();
 
     chats.forEach((chat, index) => {
       const col = getColumnEl(index);
       if (col) renderDialogColumn(index, chat.messages, lastResults[index] || null);
     });
+    saveLayout();
   }
 
   addChatBtn.addEventListener('click', () => {
     if (chats.length >= MAX_RUNS) { toast('Максимум ' + MAX_RUNS + ' чатов', true); return; }
-    chats.push({ id: 'chat_' + (nextChatId++), name: null, config: getDefaultConfig(), messages: [] });
+    chats.push({ id: 'chat_' + (nextChatId++), name: null, config: copyConfig(chats[0] && chats[0].config), messages: [] });
     renderChatBlocks();
     renderTabsMobile();
     updateDiffToolbarVisibility();
@@ -913,17 +1373,20 @@
       if (isNaN(n)) return null;
       return Math.max(lo, Math.min(hi, n));
     }
-    const out = {
-      system_prompt: (c.system_prompt || '').trim() || null,
-      stop_sequences: (c.stop_sequences || []).slice(0, MAX_STOP_SEQUENCES),
-      max_output_tokens: c.max_output_tokens != null && c.max_output_tokens >= 1 ? Math.min(4096, c.max_output_tokens) : null,
-      model: (c.model || '').trim() || DEFAULT_CHAT_MODEL,
-    };
+    const out = { model: (c.model || '').trim() || DEFAULT_CHAT_MODEL };
+    const sys = (c.system_prompt || '').trim();
+    if (sys) out.system_prompt = sys;
+    const stops = (c.stop_sequences || []).slice(0, MAX_STOP_SEQUENCES);
+    if (stops.length) out.stop_sequences = stops;
+    const maxTok = c.max_output_tokens != null && c.max_output_tokens >= 1 ? Math.min(4096, parseInt(c.max_output_tokens, 10)) : null;
+    if (maxTok != null && !isNaN(maxTok)) out.max_output_tokens = maxTok;
+    if (c.price_input_per_1m != null && c.price_input_per_1m !== '' && !isNaN(parseFloat(c.price_input_per_1m))) { const v = parseFloat(c.price_input_per_1m); if (v >= 0) out.price_input_per_1m = v; }
+    if (c.price_output_per_1m != null && c.price_output_per_1m !== '' && !isNaN(parseFloat(c.price_output_per_1m))) { const v = parseFloat(c.price_output_per_1m); if (v >= 0) out.price_output_per_1m = v; }
     if (!MODELS_WITHOUT_SAMPLING.has(out.model)) {
-      if (c.temperature_enabled) { const v = parseFloat_(c.temperature, 0, 2); if (v != null) out.temperature = v; }
-      if (c.top_p_enabled) { const v = parseFloat_(c.top_p, 0, 1); if (v != null) out.top_p = v; }
-      if (c.frequency_penalty_enabled) { const v = parseFloat_(c.frequency_penalty, -2, 2); if (v != null) out.frequency_penalty = v; }
-      if (c.presence_penalty_enabled) { const v = parseFloat_(c.presence_penalty, -2, 2); if (v != null) out.presence_penalty = v; }
+      if (c.temperature_enabled) { const v = parseFloat_(c.temperature, 0, 2); if (v != null && v !== 1) out.temperature = v; }
+      if (c.top_p_enabled) { const v = parseFloat_(c.top_p, 0, 1); if (v != null && v !== 1) out.top_p = v; }
+      if (c.frequency_penalty_enabled) { const v = parseFloat_(c.frequency_penalty, -2, 2); if (v != null && v !== 0) out.frequency_penalty = v; }
+      if (c.presence_penalty_enabled) { const v = parseFloat_(c.presence_penalty, -2, 2); if (v != null && v !== 0) out.presence_penalty = v; }
       if (c.seed_enabled) { const v = c.seed; if (v != null && String(v).trim() !== '') { const n = parseInt(v, 10); if (!isNaN(n)) out.seed = n; } }
     }
     return out;
@@ -962,6 +1425,7 @@
   function showSkeleton(index) {
     const col = getColumnEl(index);
     if (!col) return;
+    col.style.minHeight = '';
     const empty = col.querySelector('.column-empty');
     const content = col.querySelector('.column-content');
     const metrics = col.querySelector('.column-metrics');
@@ -1019,6 +1483,14 @@
     requestAnimationFrame(tick);
   }
 
+  function alignColumnMetricsHeights() {
+    var cols = scrollContainer.querySelectorAll('.chat-block .column');
+    if (cols.length < 2) return;
+    var maxH = 0;
+    for (var i = 0; i < cols.length; i++) { var h = cols[i].offsetHeight; if (h > maxH) maxH = h; }
+    if (maxH > 0) { for (var j = 0; j < cols.length; j++) cols[j].style.minHeight = maxH + 'px'; }
+  }
+
   function renderDialogColumn(index, messages, lastResult) {
     const col = getColumnEl(index);
     if (!col) return;
@@ -1052,12 +1524,62 @@
       const contentBlock = div.querySelector('.message-content');
       if (isLast && msg.role === 'assistant' && lastAssistantData && lastAssistantData.text != null) {
         typewriter(contentBlock, lastAssistantData.text || '', stopForHighlight, () => {
-          if (lastAssistantData.responseTimeMs != null || (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) || lastAssistantData.finish_reason) {
+          if (lastAssistantData.responseTimeMs != null || (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) || lastAssistantData.cost != null || lastAssistantData.finish_reason) {
             let html = '';
-            if (lastAssistantData.responseTimeMs != null) html += '<dt>Время</dt><dd>' + lastAssistantData.responseTimeMs + ' ms</dd>';
-            if (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) html += '<dt>Токены в ответе</dt><dd>' + lastAssistantData.usage.completion_tokens + '</dd>';
+            if (lastAssistantData.responseTimeMs != null) html += '<dt>Время</dt><dd>' + escapeHtml(String(lastAssistantData.responseTimeMs)) + ' ms</dd>';
+            if (lastAssistantData.usage && lastAssistantData.usage.completion_tokens != null) html += '<dt>Токены в ответе</dt><dd>' + escapeHtml(String(lastAssistantData.usage.completion_tokens)) + '</dd>';
+            if (lastAssistantData.cost != null) html += '<dt>Стоимость</dt><dd>' + escapeHtml(formatCost(lastAssistantData.cost)) + '</dd>';
             if (lastAssistantData.finish_reason) html += '<dt>Причина остановки</dt><dd>' + escapeHtml(lastAssistantData.finish_reason) + '</dd>';
-            if (html && metricsEl) { metricsEl.innerHTML = '<dl>' + html + '</dl>'; metricsEl.style.display = 'block'; }
+            var costCompare = '';
+            var timeCompare = '';
+            if (lastResults && lastResults.length >= 2) {
+              var withCost = [];
+              var withTime = [];
+              for (var j = 0; j < lastResults.length; j++) {
+                var r = lastResults[j];
+                if (r && r.cost != null && typeof r.cost === 'number') withCost.push({ i: j, cost: r.cost });
+                if (r && r.responseTimeMs != null && typeof r.responseTimeMs === 'number') withTime.push({ i: j, ms: r.responseTimeMs });
+              }
+              function pctStr(num) { return (Math.round(num * 10) / 10) + '%'; }
+              if (withCost.length >= 2) {
+                var minCostItem = withCost[0];
+                for (var k = 1; k < withCost.length; k++) { if (withCost[k].cost < minCostItem.cost) minCostItem = withCost[k]; }
+                var myCostItem = withCost.filter(function(w) { return w.i === index; })[0];
+                if (myCostItem) {
+                  if (myCostItem.i === minCostItem.i) {
+                    var nextCosts = withCost.filter(function(w) { return w.i !== index; }).sort(function(a, b) { return a.cost - b.cost; });
+                    if (nextCosts.length && nextCosts[0].cost > 0) {
+                      var costPct = ((nextCosts[0].cost - myCostItem.cost) / nextCosts[0].cost) * 100;
+                      costCompare = '<span class="metric-value-best">Самый дешёвый</span> (дешевле ' + escapeHtml(getChatLabel(chats[nextCosts[0].i], nextCosts[0].i)) + ' на ' + pctStr(costPct) + ')';
+                    } else { costCompare = '<span class="metric-value-best">Самый дешёвый</span>'; }
+                  } else if (minCostItem.cost > 0) {
+                    var costPct = ((myCostItem.cost - minCostItem.cost) / minCostItem.cost) * 100;
+                    costCompare = 'Дороже ' + escapeHtml(getChatLabel(chats[minCostItem.i], minCostItem.i)) + ' на ' + pctStr(costPct);
+                  }
+                }
+              }
+              if (withTime.length >= 2) {
+                var minTimeItem = withTime[0];
+                for (var k = 1; k < withTime.length; k++) { if (withTime[k].ms < minTimeItem.ms) minTimeItem = withTime[k]; }
+                var myTimeItem = withTime.filter(function(w) { return w.i === index; })[0];
+                if (myTimeItem) {
+                  if (myTimeItem.i === minTimeItem.i) {
+                    var nextTimes = withTime.filter(function(w) { return w.i !== index; }).sort(function(a, b) { return a.ms - b.ms; });
+                    if (nextTimes.length && nextTimes[0].ms > 0) {
+                      var timePct = ((nextTimes[0].ms - myTimeItem.ms) / nextTimes[0].ms) * 100;
+                      timeCompare = '<span class="metric-value-best">Самый быстрый</span> (быстрее ' + escapeHtml(getChatLabel(chats[nextTimes[0].i], nextTimes[0].i)) + ' на ' + pctStr(timePct) + ')';
+                    } else { timeCompare = '<span class="metric-value-best">Самый быстрый</span>'; }
+                  } else if (minTimeItem.ms > 0) {
+                    var timePct = ((myTimeItem.ms - minTimeItem.ms) / minTimeItem.ms) * 100;
+                    timeCompare = 'Медленнее ' + escapeHtml(getChatLabel(chats[minTimeItem.i], minTimeItem.i)) + ' на ' + pctStr(timePct);
+                  }
+                }
+              }
+            }
+            if (costCompare) html += '<dt class="metrics-compare-label">В сравнении (стоимость)</dt><dd class="metrics-compare-value">' + costCompare + '</dd>';
+            if (timeCompare) html += '<dt class="metrics-compare-label">В сравнении (скорость)</dt><dd class="metrics-compare-value">' + timeCompare + '</dd>';
+            if (html && metricsEl) { metricsEl.innerHTML = '<dl class="metrics-grid">' + html + '</dl>'; metricsEl.style.display = 'block'; }
+            requestAnimationFrame(function() { alignColumnMetricsHeights(); });
           }
         });
       } else {
@@ -1079,12 +1601,12 @@
     if (empty) empty.style.display = 'none';
     if (content) content.style.display = 'block';
     if (data.error) {
-      content.innerHTML = '<div class="error-inline">' + escapeHtml(data.error) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>';
+      content.innerHTML = formatApiErrorHtml(data.error);
       if (metricsEl) metricsEl.style.display = 'none';
       col.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
       return;
     }
-    const opts = { text: data.text, stopSequences: stopSeqs || null, responseTimeMs, usage: data.usage, finish_reason: data.finish_reason };
+    const opts = { text: data.text, stopSequences: stopSeqs || null, responseTimeMs, usage: data.usage, cost: data.cost, finish_reason: data.finish_reason };
     renderDialogColumn(index, chats[index].messages, opts);
   }
 
@@ -1353,10 +1875,11 @@
       let hasError = false;
       for (let i = 0; i < chats.length; i++) {
         const r = results[i] || {};
+        const runLatencyMs = r.latency_ms != null ? r.latency_ms : elapsed;
         try {
           if (r.error) {
             hasError = true;
-            renderResultColumn(i, r, elapsed, null);
+            renderResultColumn(i, r, runLatencyMs, null);
             continue;
           }
           if (continueDialog) {
@@ -1365,12 +1888,12 @@
           } else {
             chats[i].messages = [{ role: 'user', content: user_message }, { role: 'assistant', content: r.text || '' }];
           }
-          lastResults[i] = { text: r.text, usage: r.usage, finish_reason: r.finish_reason };
+          lastResults[i] = { text: r.text, usage: r.usage, cost: r.cost, finish_reason: r.finish_reason, responseTimeMs: runLatencyMs };
           const stopSeqs = (chats[i].config && chats[i].config.stop_sequences) ? chats[i].config.stop_sequences : null;
-          renderResultColumn(i, { text: r.text, usage: r.usage, finish_reason: r.finish_reason }, elapsed, stopSeqs);
+          renderResultColumn(i, { text: r.text, usage: r.usage, cost: r.cost, finish_reason: r.finish_reason }, runLatencyMs, stopSeqs);
         } catch (colErr) {
           hasError = true;
-          renderResultColumn(i, { error: String(colErr && (colErr.message || colErr)) || 'Ошибка отображения' }, elapsed, null);
+          renderResultColumn(i, { error: String(colErr && (colErr.message || colErr)) || 'Ошибка отображения' }, runLatencyMs, null);
         }
       }
       if (hasError) setStatus('Частичная ошибка', 'error');
@@ -1379,6 +1902,8 @@
       tokenCountEl.textContent = '~0 токенов';
       addToHistory(user_message, chats.map(c => ({ config: c.config, name: c.name })));
       updateDiffToolbarVisibility();
+      setTimeout(alignColumnMetricsHeights, 100);
+      setTimeout(alignColumnMetricsHeights, 1200);
     } catch (err) {
       clearTimeout(timeoutId);
       const isTimeout = err && (err.name === 'AbortError' || (controller.signal && controller.signal.aborted));
@@ -1391,7 +1916,7 @@
         if (col) {
           const content = col.querySelector('.column-content');
           const empty = col.querySelector('.column-empty');
-          if (content) { content.style.display = 'block'; content.innerHTML = '<div class="error-inline">' + escapeHtml(errStr) + '<br><button type="button" class="btn btn-secondary retry-btn">Retry</button></div>'; }
+          if (content) { content.style.display = 'block'; content.innerHTML = formatApiErrorHtml(errStr); }
           if (empty) empty.style.display = 'none';
           col.querySelector('.retry-btn')?.addEventListener('click', () => document.getElementById('form').requestSubmit());
         }

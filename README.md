@@ -23,6 +23,8 @@ pip install -r requirements.txt
 echo "OPENAI_API_KEY=sk-ваш-ключ" > .env
 # DeepSeek (нужен только для моделей deepseek-chat / deepseek-reasoner в веб-интерфейсе)
 echo "DEEPSEEK_API_KEY=ваш-ключ" >> .env
+# Hugging Face (нужен только для моделей Hugging Face в веб-интерфейсе; токен с правом Inference Providers; можно также использовать HF_TOKEN)
+echo "HUGGINGFACE_API_KEY=hf_ваш-токен" >> .env
 ```
 
 Либо задайте переменную вручную:
@@ -124,7 +126,7 @@ flask --app web_app run --port 5001
 
 Откройте в браузере: **http://127.0.0.1:5000** (или 5001 при `--port 5001`).
 
-Введите сообщение, при необходимости настройте каждый чат в своей карточке и нажмите **Run**. Ответы появятся в колонках; затем можно нажать **Оценить** для ранжирования. Веб-интерфейс использует **Chat Completions API** и поддерживает модели **OpenAI** (gpt-4o, gpt-4o-mini, o1, gpt-5.2 и др.) и **DeepSeek** (deepseek-chat, deepseek-reasoner). Для DeepSeek в `.env` должен быть задан `DEEPSEEK_API_KEY`. CLI-чат использует Responses API (только OpenAI).
+Введите сообщение, при необходимости настройте каждый чат в своей карточке и нажмите **Run**. Ответы появятся в колонках; затем можно нажать **Оценить** для ранжирования. Веб-интерфейс использует **Chat Completions API** и поддерживает модели **OpenAI** (gpt-4o, gpt-4o-mini, o1, gpt-5.2 и др.), **DeepSeek** (deepseek-chat, deepseek-reasoner) и **Hugging Face** (DeepSeek-R1, Qwen2.5, GLM-4.5 и др. через Inference Providers). Для DeepSeek в `.env` задайте `DEEPSEEK_API_KEY`, для Hugging Face — `HUGGINGFACE_API_KEY` (токен с правом «Inference Providers»; использование может быть платным/по квотам). CLI-чат использует Responses API (только OpenAI).
 
 ## Project layout
 
